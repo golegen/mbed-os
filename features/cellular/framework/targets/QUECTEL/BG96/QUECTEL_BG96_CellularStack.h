@@ -25,6 +25,14 @@ namespace mbed {
 #define BG96_SOCKET_MAX 12
 #define BG96_CREATE_SOCKET_TIMEOUT 150000 //150 seconds
 #define BG96_CLOSE_SOCKET_TIMEOUT 20000 // TCP socket max timeout is >10sec
+#define BG96_MAX_RECV_SIZE 1500
+#define BG96_MAX_SEND_SIZE 1460
+#define BG96_SOCKET_BIND_FAIL 556
+
+typedef enum {
+    URC_RECV,
+    URC_CLOSED,
+} urc_type_t;
 
 class QUECTEL_BG96_CellularStack : public AT_CellularStack {
 public:
@@ -39,6 +47,13 @@ protected: // NetworkStack
                                         nsapi_socket_t *handle, SocketAddress *address = 0);
 
     virtual nsapi_error_t socket_connect(nsapi_socket_t handle, const SocketAddress &address);
+
+#ifdef MBED_CONF_CELLULAR_OFFLOAD_DNS_QUERIES
+    virtual nsapi_error_t gethostbyname(const char *host, SocketAddress *address, nsapi_version_t version, const char *interface_name);
+    virtual nsapi_value_or_error_t gethostbyname_async(const char *host, hostbyname_cb_t callback, nsapi_version_t version = NSAPI_UNSPEC,
+                                                       const char *interface_name = NULL);
+    virtual nsapi_error_t gethostbyname_async_cancel(int id);
+#endif
 
 protected: // AT_CellularStack
 
@@ -57,10 +72,23 @@ protected: // AT_CellularStack
                                                        void *buffer, nsapi_size_t size);
 
 private:
-    // URC handlers
-    void urc_qiurc();
+    // URC handler
+    void urc_qiurc(urc_type_t urc_type);
+    // URC handler for socket data being received
+    void urc_qiurc_recv();
+    // URC handler for socket being closed
+    void urc_qiurc_closed();
 
     void handle_open_socket_response(int &modem_connect_id, int &err);
+
+#ifdef MBED_CONF_CELLULAR_OFFLOAD_DNS_QUERIES
+    // URC handler for DNS query
+    void urc_qiurc_dnsgip();
+    // read DNS query result
+    bool read_dnsgip(SocketAddress &address, nsapi_version_t _dns_version);
+    hostbyname_cb_t _dns_callback;
+    nsapi_version_t _dns_version;
+#endif
 };
 } // namespace mbed
 #endif /* QUECTEL_BG96_CELLULARSTACK_H_ */

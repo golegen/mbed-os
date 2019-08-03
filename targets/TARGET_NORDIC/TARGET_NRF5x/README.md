@@ -153,6 +153,16 @@ The assert handler is defined in mbed-os/features/FEATURE_BLE/targets/TARGET_NOR
  * It is not possible to do an asynchronous write from flash and receive non-asynchronously at the same time since the non-asynchronous receive buffer is being used as the temporary transmission buffer.
  * The driver will flush the DMA buffer after a configurable timeout. During this process the UART will be halted and therefor unable to receive data. Hardware flow control should be enabled to avoid missing any data during this window.
 
+#### Serial Wire Output (SWO)
+
+On the nRF52832 pin 18 (p18 or p0_18) is the SWO pin and a GPIO pin.  On the nRF52_DK and DELTA_DFBM_NQ620 targets p18 is also mapped to LED2, so the ITM has been removed from these targets to avoid contention.  If you need SWO capability instead of LED2, add the ITM through ```mbed_app.json```:
+```
+    "target_overrides": {
+        "*": {
+            "target.device_has_add": ["ITM"]
+        }
+    }
+```
 
 ## SoftDevice
 
@@ -170,41 +180,54 @@ SoftDevices are treated as bootloaders and automatically combined by the tools. 
 
 NRF52832 uses the S132 SoftDevice and NRF52840 uses the S140 SoftDevice.
 
-The X_OTA and X_MBR binaries are obtained from the original X_FULL SoftDevice by splitting it in an MBR part and a SoftDevice part. The MBR is needed for the bootloader and the SoftDevice for firmware updates.
+The OTA and MBR binaries are obtained from the original FULL SoftDevice by splitting it in an MBR part and a SoftDevice part. The MBR is needed for the bootloader and the SoftDevice for firmware updates.
 
 ### Changing SoftDevice
 
-By default, all applications are built with the FULL SoftDevice. This can be changed by modifying the application's `mbed_app.json` configuration file.
+By default, all applications are built with the FULL SoftDevice. This can be changed by modifying the application's `mbed_app.json` configuration file. Examples for the NRF52_DK and NRF52840_DK boards are shown below.
 
-Build application without SoftDevice:
+Build application with no MBR or SoftDevice:
 
 ```
     "target_overrides": {
-        "*": {
-            "target.extra_labels_remove": ["SOFTDEVICE_COMMON", "SOFTDEVICE_X_FULL"],
+        "NRF52_DK": {
+            "target.extra_labels_remove": ["SOFTDEVICE_COMMON", "SOFTDEVICE_S132_FULL"],
             "target.extra_labels_add": ["SOFTDEVICE_NONE"]
-        }
+        },
+        "NRF52840_DK": {
+            "target.extra_labels_remove": ["SOFTDEVICE_COMMON", "SOFTDEVICE_S140_FULL"],
+            "target.extra_labels_add": ["SOFTDEVICE_NONE"]
+        }       
     }
 ```
 
-Build application for firmware update using SoftDevice X:
+
+Build application with MBR only:
 
 ```
     "target_overrides": {
-        "*": {
-            "target.extra_labels_remove": ["SOFTDEVICE_X_FULL"],
-            "target.extra_labels_add": ["SOFTDEVICE_X_OTA"]
-        }
+        "NRF52_DK": {
+            "target.extra_labels_remove": ["SOFTDEVICE_COMMON", "SOFTDEVICE_S132_FULL"],
+            "target.extra_labels_add": ["SOFTDEVICE_S132_MBR"]
+        },
+        "NRF52840_DK": {
+            "target.extra_labels_remove": ["SOFTDEVICE_S140_FULL"],
+            "target.extra_labels_add": ["SOFTDEVICE_S140_MBR"]
+        }              
     }
 ```
 
-Build bootloader without SoftDevice X:
+## NRF52840 CryptoCell310 Support 
 
+By default, all NRF52840 applications will use the CryptoCell310 subsystem which is built into the NRF52840.  This provides hardware support for random number generation and encryption which are utilized by Mbed TLS.  If using the CryptoCell310 subsystem is not desired, it can be replaced with a software implementation.  This can be done by modifying the application's `mbed_app.json` configuration file as shown below.
+ 
 ```
     "target_overrides": {
-        "*": {
-            "target.extra_labels_remove": ["SOFTDEVICE_COMMON", "SOFTDEVICE_X_FULL"],
-            "target.extra_labels_add": ["SOFTDEVICE_X_MBR"]
+        "NRF52840_DK": {
+            "target.features_remove": ["CRYPTOCELL310"],
+            "target.macros_remove": ["MBEDTLS_CONFIG_HW_SUPPORT"],
+            "target.macros_add": ["NRFX_RNG_ENABLED=1", "RNG_ENABLED=1", "NRF_QUEUE_ENABLED=1"]
         }
     }
 ```
+

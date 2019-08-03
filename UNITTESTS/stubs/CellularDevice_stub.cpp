@@ -15,22 +15,29 @@
  * limitations under the License.
  */
 
-#include "CellularDevice.h"
 #include "CellularDevice_stub.h"
-#include "EventQueue.h"
+#include "events/EventQueue.h"
 #include "CellularUtil.h"
+#include "myCellularDevice.h"
 
 using namespace mbed;
 
 int CellularDevice_stub::connect_counter = -1;
-
+bool CellularDevice_stub::create_in_get_default = false;
+uint16_t CellularDevice_stub::retry_timeout_array[CELLULAR_RETRY_ARRAY_SIZE] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+int CellularDevice_stub::retry_array_length = 0;
 
 MBED_WEAK CellularDevice *CellularDevice::get_default_instance()
 {
-    return NULL;
+    if (CellularDevice_stub::create_in_get_default) {
+        static myCellularDevice dev(NULL);
+        return &dev;
+    } else {
+        return NULL;
+    }
 }
 
-CellularDevice::CellularDevice(FileHandle *fh) :  _network_ref_count(0), _sms_ref_count(0), _power_ref_count(0), _sim_ref_count(0),
+CellularDevice::CellularDevice(FileHandle *fh) :  _network_ref_count(0), _sms_ref_count(0),
     _info_ref_count(0), _fh(fh), _queue(5 * EVENTS_EVENT_SIZE), _state_machine(0), _nw(0)
 {
 }
@@ -56,6 +63,17 @@ void CellularDevice::set_sim_pin(char const *)
 CellularContext *CellularDevice::get_context_list() const
 {
     return NULL;
+}
+
+void CellularDevice::get_retry_timeout_array(uint16_t *timeout, int &array_len) const
+{
+    array_len = CellularDevice_stub::retry_array_length;
+
+    if (CellularDevice_stub::retry_array_length == 0) {
+        timeout = 0;
+    } else {
+        timeout = CellularDevice_stub::retry_timeout_array;
+    }
 }
 
 nsapi_error_t CellularDevice::set_device_ready()
@@ -86,4 +104,23 @@ nsapi_error_t CellularDevice::attach_to_network()
     }
 
     return NSAPI_ERROR_OK;
+}
+
+nsapi_error_t CellularDevice::set_pin(const char *sim_pin)
+{
+    return NSAPI_ERROR_OK;
+}
+
+nsapi_error_t CellularDevice::get_sim_state(SimState &state)
+{
+    return NSAPI_ERROR_OK;
+}
+
+nsapi_error_t CellularDevice::shutdown()
+{
+    return NSAPI_ERROR_OK;
+}
+
+void CellularDevice::cellular_callback(nsapi_event_t ev, intptr_t ptr, CellularContext *ctx)
+{
 }

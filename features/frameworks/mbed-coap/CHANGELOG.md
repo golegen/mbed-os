@@ -1,5 +1,21 @@
 # Change Log
 
+## [v4.8.0](https://github.com/ARMmbed/mbed-coap/releases/tag/v4.8.0) 
+- Make `sn_coap_protocol_linked_list_duplication_info_remove` API to public. User might want to delete some messages from the duplicate list.
+- Enable support for unified client configuration.
+
+-[Full Changelog](https://github.com/ARMmbed/mbed-coap/compare/v4.7.4...v4.8.0)
+
+## [v4.7.4](https://github.com/ARMmbed/mbed-coap/releases/tag/v4.7.4) 
+
+- Remove dependency to yotta tool
+- Do not remove stored (GET) blockwise message when EMPTY ACK received
+    When non piggybacked response mode is used original GET request must not be removed from the stored message list.
+    Message is needed for building the next (GET) blockwise message.
+- Move definitions to sn_config.h
+
+-[Full Changelog](https://github.com/ARMmbed/mbed-coap/compare/v4.7.3...v4.7.4)
+
 ## [v4.7.3](https://github.com/ARMmbed/mbed-coap/releases/tag/v4.7.3) 
 
 - Do not store EMPTY response to blockwise list

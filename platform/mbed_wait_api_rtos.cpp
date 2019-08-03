@@ -16,7 +16,10 @@
  */
 
 // This implementation of the wait functions will be compiled only
-// if the RTOS is present.
+// if the RTOS is present. Note that we still use these old
+// bare metal versions of wait and wait_ms rather than using
+// thread_sleep_for for backwards compatibility. People should
+// be prompted to shift via their deprecation.
 #ifdef MBED_CONF_RTOS_PRESENT
 
 #include "platform/mbed_wait_api.h"
@@ -30,7 +33,7 @@
 void wait(float s)
 {
     if ((s >= 0.01f)  && core_util_are_interrupts_enabled()) {
-        wait_ms(s * 1000.0f);
+        rtos::ThisThread::sleep_for(s * 1000.0f);
         return;
     }
 
@@ -61,18 +64,6 @@ void wait_ms(int ms)
     } else {
         rtos::ThisThread::sleep_for(ms);
     }
-}
-
-/*  The actual time delay may be 1 less usec */
-void wait_us(int us)
-{
-    if (us > 10000) {
-        MBED_WARNING(MBED_MAKE_ERROR(MBED_MODULE_PLATFORM, MBED_ERROR_UNKNOWN),
-                     "wait_us blocks deep sleep, wait_ms recommended for long delays\n");
-    }
-    const ticker_data_t *const ticker = get_us_ticker_data();
-    uint32_t start = ticker_read(ticker);
-    while ((ticker_read(ticker) - start) < (uint32_t)us);
 }
 
 #endif // #if MBED_CONF_RTOS_PRESENT

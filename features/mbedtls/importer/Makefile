@@ -27,38 +27,80 @@
 #
 
 # Set the mbed TLS release to import (this can/should be edited before import)
-MBED_TLS_RELEASE ?= mbedtls-2.15.1
+MBED_TLS_RELEASE ?= mbedtls-2.18.1
+MBED_TLS_REPO_URL ?= git@github.com:ARMmbed/mbedtls-restricted.git
 
 # Translate between mbed TLS namespace and mbed namespace
 TARGET_PREFIX:=../
-TARGET_PREFIX_CRYPTO:=../mbed-crypto/
 TARGET_SRC:=$(TARGET_PREFIX)src
 TARGET_INC:=$(TARGET_PREFIX)inc
 TARGET_TESTS:=$(TARGET_PREFIX)TESTS
 
-# New folder structure is introduced here for targets with Secured-Partition-Environment
-# and Non-Secured-Partition-Environment, below documentation for each folder:
-# COMPONENT_PSA_SRV_IMPL - include secure service business logic implementation
-# code. For example Mbed Crypto or secure time core logic
-TARGET_SRV_IMPL:=$(TARGET_PREFIX_CRYPTO)/platform/TARGET_PSA/COMPONENT_PSA_SRV_IMPL
-# COMPONENT_SPE - include code that compiles ONLY to secure image and never
-# compiles to non-secure image
-TARGET_SPE:=$(TARGET_PREFIX_CRYPTO)/platform/TARGET_PSA/COMPONENT_SPE
-# The folder contain specific target implementation using hardware.
-TARGET_PSA_DRIVERS:=$(TARGET_PREFIX_CRYPTO)/targets
-# COMPONENT_NSPE - include code that compiles ONLY to non-secure image and
-# never compiles to secure image
-TARGET_NSPE:=$(TARGET_SRV_IMPL)/COMPONENT_NSPE
-
 # mbed TLS source directory - hidden from mbed via TARGET_IGNORE
-MBED_TLS_URL:=git@github.com:ARMmbed/mbedtls-restricted.git
 MBED_TLS_DIR:=TARGET_IGNORE/mbedtls
 MBED_TLS_API:=$(MBED_TLS_DIR)/include/mbedtls
 MBED_TLS_GIT_CFG=$(MBED_TLS_DIR)/.git/config
 
-# Mbed Crypto directory - hidden from mbed via TARGET_IGNORE
-MBED_CRYPTO_DIR:=$(MBED_TLS_DIR)/crypto
-MBED_CRYPTO_API:=$(MBED_CRYPTO_DIR)/include/psa
+CRYPTO_SRC := \
+	$(TARGET_SRC)/aes.c \
+	$(TARGET_SRC)/aesni.c \
+	$(TARGET_SRC)/arc4.c \
+	$(TARGET_SRC)/aria.c \
+	$(TARGET_SRC)/asn1parse.c \
+	$(TARGET_SRC)/asn1write.c \
+	$(TARGET_SRC)/base64.c \
+	$(TARGET_SRC)/bignum.c \
+	$(TARGET_SRC)/blowfish.c \
+	$(TARGET_SRC)/camellia.c \
+	$(TARGET_SRC)/ccm.c \
+	$(TARGET_SRC)/chacha20.c \
+	$(TARGET_SRC)/chachapoly.c \
+	$(TARGET_SRC)/cipher.c \
+	$(TARGET_SRC)/cipher_wrap.c \
+	$(TARGET_SRC)/cmac.c \
+	$(TARGET_SRC)/ctr_drbg.c \
+	$(TARGET_SRC)/des.c \
+	$(TARGET_SRC)/dhm.c \
+	$(TARGET_SRC)/ecdh.c \
+	$(TARGET_SRC)/ecdsa.c \
+	$(TARGET_SRC)/ecjpake.c \
+	$(TARGET_SRC)/ecp.c \
+	$(TARGET_SRC)/ecp_curves.c \
+	$(TARGET_SRC)/entropy.c \
+	$(TARGET_SRC)/entropy_poll.c \
+	$(TARGET_SRC)/gcm.c \
+	$(TARGET_SRC)/havege.c \
+	$(TARGET_SRC)/hkdf.c \
+	$(TARGET_SRC)/hmac_drbg.c \
+	$(TARGET_SRC)/md.c \
+	$(TARGET_SRC)/md2.c \
+	$(TARGET_SRC)/md4.c \
+	$(TARGET_SRC)/md5.c \
+	$(TARGET_SRC)/md_wrap.c \
+	$(TARGET_SRC)/memory_buffer_alloc.c \
+	$(TARGET_SRC)/nist_kw.c \
+	$(TARGET_SRC)/oid.c \
+	$(TARGET_SRC)/padlock.c \
+	$(TARGET_SRC)/pem.c \
+	$(TARGET_SRC)/pk.c \
+	$(TARGET_SRC)/pk_wrap.c \
+	$(TARGET_SRC)/pkcs12.c \
+	$(TARGET_SRC)/pkcs5.c \
+	$(TARGET_SRC)/pkparse.c \
+	$(TARGET_SRC)/pkwrite.c \
+	$(TARGET_SRC)/platform.c \
+	$(TARGET_SRC)/platform_util.c \
+	$(TARGET_SRC)/poly1305.c \
+	$(TARGET_SRC)/ripemd160.c \
+	$(TARGET_SRC)/rsa_internal.c \
+	$(TARGET_SRC)/rsa.c \
+	$(TARGET_SRC)/sha1.c \
+	$(TARGET_SRC)/sha256.c \
+	$(TARGET_SRC)/sha512.c \
+	$(TARGET_SRC)/threading.c \
+	$(TARGET_SRC)/timing.c \
+	$(TARGET_SRC)/xtea.c \
+	# end
 
 .PHONY: all deploy deploy-tests rsync mbedtls clean update
 
@@ -72,6 +114,9 @@ rsync:
 	rm -rf $(TARGET_SRC)
 	rsync -a --exclude='*.txt' $(MBED_TLS_DIR)/library/ $(TARGET_SRC)
 	#
+	# Remove files that duplicate Mbed Crypto
+	rm -rf $(CRYPTO_SRC)
+	#
 	# Copying mbed TLS headers to mbed includes...
 	rm -rf $(TARGET_INC)
 	mkdir -p $(TARGET_INC)
@@ -81,28 +126,14 @@ rsync:
 	cp $(MBED_TLS_DIR)/LICENSE $(TARGET_PREFIX)
 	cp $(MBED_TLS_DIR)/apache-2.0.txt $(TARGET_PREFIX)
 	#
-	# Create Mbed Crypto target folder
-	mkdir -p $(TARGET_PREFIX_CRYPTO)
-	#
-	# Copying Mbed Crypto into Mbed OS..
-	rm -rf $(TARGET_SRV_IMPL)
-	rm -rf $(TARGET_SPE)
-
-	mkdir -p $(TARGET_SRV_IMPL)
-	mkdir -p $(TARGET_SPE)
-	mkdir -p $(TARGET_NSPE)
-	mkdir -p $(TARGET_PSA_DRIVERS)
-
-	rsync -a --delete --exclude='crypto_struct.h' $(MBED_CRYPTO_API) $(TARGET_INC)
-	rsync -a --delete $(MBED_CRYPTO_API)/crypto_struct.h $(TARGET_NSPE)
-	rsync -a --delete $(MBED_CRYPTO_API)/crypto_struct.h $(TARGET_SPE)/crypto_struct_spe.h
-	rsync -a --delete $(MBED_CRYPTO_DIR)/library/psa_*.c $(TARGET_SRV_IMPL)
-	rsync -a --delete $(MBED_CRYPTO_DIR)/library/psa_*.h $(TARGET_SRV_IMPL)
 
 deploy: rsync
 	#
 	# Adjusting the default mbed TLS config file to mbed purposes
 	./adjust-config.sh $(MBED_TLS_DIR)/scripts/config.pl $(TARGET_INC)/mbedtls/config.h
+	#
+	# Adjusting the default mbed TLS check-config file to mbed purposes
+	./adjust-check-config.sh $(TARGET_INC)/mbedtls/check_config.h
 	#
 	# Copy and adjust the trimmed config that does not require entropy source
 	cp $(MBED_TLS_DIR)/configs/config-no-entropy.h $(TARGET_INC)/mbedtls/.
@@ -122,8 +153,7 @@ update: $(MBED_TLS_GIT_CFG)  $(MBED_TLS_HA_GIT_CFG)
 	# Updating to the specified mbed TLS library version
 	# (If it is not an initial checkout we will start with the repository
 	# being in a detached head state)
-	git -C $(MBED_TLS_DIR) checkout development
-	git -C $(MBED_TLS_DIR) pull --rebase origin development
+	git -C $(MBED_TLS_DIR) fetch
 	#
 	# Checking out the required release
 	git -C $(MBED_TLS_DIR) checkout $(MBED_TLS_RELEASE)
@@ -132,14 +162,11 @@ update: $(MBED_TLS_GIT_CFG)  $(MBED_TLS_HA_GIT_CFG)
 	git -C $(MBED_TLS_DIR) submodule update --init --recursive
 	#
 	# Updating checked out version tag
-	echo $(MBED_TLS_RELEASE) > $(TARGET_PREFIX)VERSION.txt
-	#
-	# Updating Mbed Crypto checked out version tag
-	git -C $(MBED_CRYPTO_DIR) describe --tags --abbrev=12 --dirty --always >> $(TARGET_PREFIX)VERSION.txt
+	git -C $(MBED_TLS_DIR) describe --tags --abbrev=12 --dirty --always > $(TARGET_PREFIX)VERSION.txt
 
 $(MBED_TLS_GIT_CFG):
 	rm -rf $(MBED_TLS_DIR)
-	git clone $(MBED_TLS_URL) $(MBED_TLS_DIR)
+	git clone $(MBED_TLS_REPO_URL) $(MBED_TLS_DIR)
 
 clean:
 	rm -f $(TARGET_PREFIX)LICENSE
@@ -149,5 +176,3 @@ clean:
 	rm -rf $(TARGET_SRC)
 	rm -rf $(TARGET_INC)
 	rm -rf $(MBED_TLS_DIR)
-	rm -rf $(TARGET_SRV_IMPL)
-	rm -rf $(TARGET_SPE)

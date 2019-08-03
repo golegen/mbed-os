@@ -107,7 +107,7 @@ const PinMap PinMap_SPI_MISO[] = {
 const PinMap PinMap_SPI_SSEL[] = {
     {P0_1,  SPI_0, 2},
     {P3_30, SPI_1, 1},
-    {P4_6,  SPI_1, 2},
+    {P4_6,  SPI_1, ((1 << SSELNUM_SHIFT) | 2)},
     {NC  ,  NC   , 0}
 };
 
@@ -117,12 +117,25 @@ const PinMap PinMap_PWM[] = {
 };
 
 /************QSPI***************/
-const PinMap PinMap_QSPI_DATA[] = {
+
+const PinMap PinMap_QSPI_DATA0[] = {
     {P0_24, QSPI_0, 6},
+    {NC, NC, 0}
+};
+
+const PinMap PinMap_QSPI_DATA1[] = {
     {P0_25, QSPI_0, 6},
+    {NC, NC, 0}
+};
+
+const PinMap PinMap_QSPI_DATA2[] = {
     {P0_28, QSPI_0, 6},
+    {NC, NC, 0}
+};
+
+const PinMap PinMap_QSPI_DATA3[] = {
     {P0_27, QSPI_0, 6},
-    {NC   , NC    , 0}
+    {NC, NC, 0}
 };
  const PinMap PinMap_QSPI_SCLK[] = {
     {P0_26, QSPI_0, 6},

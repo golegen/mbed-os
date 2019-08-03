@@ -34,6 +34,8 @@
 #include "PortNames.h"
 #include "PeripheralNames.h"
 #include "PinNames.h"
+#include "stm32f3xx_ll_usart.h"
+#include "stm32f3xx_ll_tim.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,7 +59,7 @@ struct spi_s {
     PinName pin_mosi;
     PinName pin_sclk;
     PinName pin_ssel;
-#ifdef DEVICE_SPI_ASYNCH
+#if DEVICE_SPI_ASYNCH
     uint32_t event;
     uint8_t transfer_type;
 #endif

@@ -27,10 +27,10 @@ using namespace utest::v1;
 void UDPSOCKET_SENDTO_REPEAT()
 {
     UDPSocket sock;
-    TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.open(get_interface()));
+    TEST_ASSERT_EQUAL(NSAPI_ERROR_OK, sock.open(NetworkInterface::get_default_instance()));
 
     SocketAddress udp_addr;
-    get_interface()->gethostbyname(MBED_CONF_APP_ECHO_SERVER_ADDR, &udp_addr);
+    NetworkInterface::get_default_instance()->gethostbyname(ECHO_SERVER_ADDR, &udp_addr);
     udp_addr.set_port(9);
 
     int sent;
@@ -45,7 +45,7 @@ void UDPSOCKET_SENDTO_REPEAT()
                 break;
             }
             oom_earlier = true;
-            wait(1);
+            ThisThread::sleep_for(1000);
             continue;
         }
         oom_earlier = false;

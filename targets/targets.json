@@ -1,6 +1,7 @@
 {
     "Target": {
         "core": null,
+        "trustzone": false,
         "default_toolchain": "ARM",
         "supported_toolchains": null,
         "extra_labels": [],
@@ -13,7 +14,12 @@
         "public": false,
         "default_lib": "std",
         "bootloader_supported": false,
+        "static_memory_defines": true,
         "config": {
+            "console-uart": {
+                "help": "Target has UART console on pins STDIO_UART_TX, STDIO_UART_RX. Value is only significant if target has SERIAL device.",
+                "value": true
+            },
             "console-uart-flow-control": {
                 "help": "Console hardware flow control. Options: null, RTS, CTS, RTSCTS.",
                 "value": null
@@ -32,8 +38,19 @@
             },
             "mpu-rom-end": {
                 "help": "Last address of ROM protected by the MPU",
-                "value": "0x0fffffff",
-                "macro_name": "MPU_ROM_END"
+                "value": "0x0fffffff"
+            },
+            "default-form-factor": {
+                "help": "Default form factor of this board taken from supported_form_factors. This must be a lowercase string such as 'arduino'",
+                "value": null
+            },
+            "tickless-from-us-ticker": {
+                "help": "Run tickless from the microsecond ticker rather than the low power ticker. Running tickless off of the microsecond ticker improves interrupt latency on targets which use lpticker_delay_ticks",
+                "value": false
+            },
+            "init-us-ticker-at-boot": {
+                "help": "Initialize the microsecond ticker at boot rather than on first use, and leave it initialized. This speeds up wait_us in particular.",
+                "value": false
             }
         }
     },
@@ -97,6 +114,16 @@
                 "help": "Size in bytes of Shared RAM between Secure and Non-secure worlds",
                 "value": null,
                 "macro_name": "PSA_SHARED_RAM_SIZE"
+            },
+            "public-ram-start": {
+                "help": "Starting address of Public RAM for variables accessible from Non-secure worlds",
+                "value": null,
+                "macro_name": "PSA_PUBLIC_RAM_START"
+            },
+            "public-ram-size": {
+                "help": "Size in bytes of Public RAM variables accessible from Non-secure worlds",
+                "value": null,
+                "macro_name": "PSA_PUBLIC_RAM_SIZE"
             }
         }
     },
@@ -511,6 +538,9 @@
             "SLEEP",
             "SPI"
         ],
+        "macros": [
+            "MBED_FAULT_HANDLER_DISABLED"
+        ],
         "default_lib": "small",
         "release_versions": ["2"],
         "device_name": "LPC11U68JBD100"
@@ -593,7 +623,8 @@
             "SPISLAVE",
             "STDIO_MESSAGES",
             "FLASH",
-            "MPU"
+            "MPU",
+            "USBDEVICE"
         ],
         "release_versions": ["2", "5"],
         "device_name": "LPC1768",
@@ -640,7 +671,9 @@
             "SPISLAVE",
             "STDIO_MESSAGES",
             "FLASH",
-            "MPU"
+            "MPU",
+            "USBDEVICE",
+            "USTICKER"
         ],
         "release_versions": ["2", "5"],
         "device_name": "LPC1768",
@@ -849,7 +882,8 @@
             "SPI",
             "SPISLAVE",
             "STDIO_MESSAGES",
-            "MPU"
+            "MPU",
+            "USTICKER"
         ],
         "device_name": "LPC4088FBD144",
         "overrides": {
@@ -1357,7 +1391,7 @@
         "supported_form_factors": ["ARDUINO"],
         "core": "Cortex-M0+",
         "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
-        "extra_labels": ["Freescale", "MCUXpresso_MCUS", "KSDK2_MCUS", "FRDM"],
+        "extra_labels": ["Freescale", "MCUXpresso_MCUS", "KSDK2_MCUS", "FRDM", "FRAMEWORK_5_3_3", "NXP"],
         "is_disk_virtual": true,
         "macros": ["CPU_MKW41Z512VHT4", "FSL_RTOS_MBED"],
         "inherits": ["Target"],
@@ -1381,11 +1415,15 @@
             "SPISLAVE",
             "TRNG",
             "STDIO_MESSAGES",
-            "FLASH"
+            "FLASH",
+            "802_15_4_PHY"
         ],
         "release_versions": ["2", "5"],
         "device_name": "MKW41Z512xxx4",
-        "bootloader_supported": true
+        "bootloader_supported": true,
+        "overrides": {
+            "network-default-interface-type": "MESH"
+        }
     },
     "MCU_K24F1M": {
         "core": "Cortex-M4F",
@@ -1451,7 +1489,7 @@
             "PSA"
         ],
         "is_disk_virtual": true,
-        "macros": ["CPU_MK64FN1M0VMD12", "FSL_RTOS_MBED", "MBEDTLS_PSA_CRYPTO_C"],
+        "macros": ["CPU_MK64FN1M0VMD12", "FSL_RTOS_MBED", "MBED_SPLIT_HEAP"],
         "inherits": ["Target"],
         "detect_code": ["0240"],
         "device_has": [
@@ -1469,6 +1507,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "SERIAL",
             "SERIAL_FC",
             "SERIAL_ASYNCH",
@@ -1477,11 +1516,11 @@
             "SPI_ASYNCH",
             "SPISLAVE",
             "STDIO_MESSAGES",
-            "STORAGE",
             "TRNG",
-            "FLASH"
+            "FLASH",
+            "USBDEVICE",
+            "WATCHDOG"
         ],
-        "features": ["STORAGE"],
         "release_versions": ["2", "5"],
         "device_name": "MK64FN1M0xxx12",
         "bootloader_supported": true,
@@ -1491,6 +1530,7 @@
     },
     "SDT64B": {
         "inherits": ["K64F"],
+        "components_add": ["FLASHIAP"],
         "extra_labels_add": ["K64F"],
         "extra_labels_remove": ["FRDM"],
         "components_remove": ["SD"],
@@ -1621,6 +1661,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "SERIAL",
             "SERIAL_ASYNCH",
             "SERIAL_FC",
@@ -1630,7 +1671,8 @@
             "SPISLAVE",
             "STDIO_MESSAGES",
             "TRNG",
-            "FLASH"
+            "FLASH",
+            "WATCHDOG"
         ],
         "default_lib": "std",
         "release_versions": ["2", "5"],
@@ -1645,6 +1687,7 @@
         "macros": ["FSL_RTOS_MBED", "USE_EXTERNAL_RTC"],
         "default_toolchain": "ARM",
         "default_lib": "std",
+        "forced_reset_timeout": 7,
         "release_versions": ["2", "5"]
     },
     "RAPIDIOT_K64F": {
@@ -1684,8 +1727,44 @@
             "TRNG",
             "FLASH"
         ],
-        "forced_reset_timeout": 7,
         "device_name": "MK64FN1M0xxx12",
+        "bootloader_supported": true
+    },
+    "RAPIDIOT_KW41Z": {
+        "inherits": ["RAPIDIOT"],
+        "core": "Cortex-M0+",
+        "extra_labels": [
+            "Freescale",
+            "MCUXpresso_MCUS",
+            "KSDK2_MCUS",
+            "KW41Z"
+        ],
+        "macros_add": ["CPU_MKW41Z512VHT4"],
+        "is_disk_virtual": true,
+        "mbed_rom_start": "0x00004000",
+        "mbed_rom_size": "0x7C000",
+        "detect_code": ["0234"],
+        "device_has": [
+            "USTICKER",
+            "LPTICKER",
+            "ANALOGIN",
+            "ANALOGOUT",
+            "I2C",
+            "I2CSLAVE",
+            "INTERRUPTIN",
+            "PORTIN",
+            "PORTINOUT",
+            "PORTOUT",
+            "PWMOUT",
+            "SERIAL",
+            "SLEEP",
+            "SPI",
+            "SPISLAVE",
+            "TRNG",
+            "STDIO_MESSAGES",
+            "FLASH"
+        ],
+        "device_name": "MKW41Z512xxx4",
         "bootloader_supported": true
     },
     "K66F": {
@@ -1698,10 +1777,11 @@
             "MCUXpresso_MCUS",
             "KSDK2_MCUS",
             "FRDM",
-            "Freescale_EMAC"
+            "Freescale_EMAC",
+            "PSA"
         ],
         "is_disk_virtual": true,
-        "macros": ["CPU_MK66FN2M0VMD18", "FSL_RTOS_MBED"],
+        "macros": ["CPU_MK66FN2M0VMD18", "FSL_RTOS_MBED", "MBED_SPLIT_HEAP"],
         "inherits": ["Target"],
         "detect_code": ["0311"],
         "device_has": [
@@ -1781,7 +1861,11 @@
         "public": false,
         "extra_labels": ["STM"],
         "supported_toolchains": ["ARM", "uARM", "IAR", "GCC_ARM"],
-        "macros": ["TRANSACTION_QUEUE_SIZE_SPI=2"],
+        "macros": [
+            "USE_HAL_DRIVER",
+            "USE_FULL_LL_DRIVER",
+            "TRANSACTION_QUEUE_SIZE_SPI=2"
+        ],
         "config": {
             "lse_available": {
                 "help": "Define if a Low Speed External xtal (LSE) is available on the board (0 = No, 1 = Yes). If Yes, the LSE will be used to clock the RTC, LPUART, ... otherwise the Low Speed Internal clock (LSI) will be used",
@@ -1808,7 +1892,8 @@
             }
         },
         "overrides": {
-            "deep-sleep-latency": 3
+            "deep-sleep-latency": 3,
+            "init-us-ticker-at-boot": true
         },
         "device_has": [
             "USTICKER",
@@ -1824,11 +1909,14 @@
             "PORTOUT",
             "PWMOUT",
             "SERIAL",
+            "SERIAL_FC",
             "SLEEP",
             "SPI",
             "SPISLAVE",
             "SPI_ASYNCH",
-            "STDIO_MESSAGES"
+            "STDIO_MESSAGES",
+            "WATCHDOG",
+            "RESET_REASON"
         ]
     },
     "MIMXRT1050_EVK": {
@@ -1845,7 +1933,7 @@
             "XIP_BOOT_HEADER_DCD_ENABLE=1",
             "SKIP_SYSCLK_INIT",
             "FSL_FEATURE_PHYKSZ8081_USE_RMII50M_MODE",
-            "SDRAM_IS_SHAREABLE"
+            "MBED_MPU_CUSTOM"
         ],
         "inherits": ["Target"],
         "detect_code": ["0227"],
@@ -1867,8 +1955,7 @@
             "SERIAL",
             "SPI",
             "SPISLAVE",
-            "STDIO_MESSAGES",
-            "MPU"
+            "STDIO_MESSAGES"
         ],
         "release_versions": ["2", "5"],
         "features": ["LWIP"],
@@ -1918,12 +2005,13 @@
         "core": "Cortex-M4F",
         "supported_toolchains": ["ARM", "IAR", "GCC_ARM"],
         "extra_labels": [
-            "NXP", 
-            "MCUXpresso_MCUS", 
-            "LPC", 
+            "NXP",
+            "MCUXpresso_MCUS",
+            "LPC",
             "NXP_EMAC"
         ],
         "is_disk_virtual": true,
+        "public": false,
         "macros": ["CPU_LPC54628J512ET180", "FSL_RTOS_MBED"],
         "inherits": ["Target"],
         "device_has": [
@@ -1958,13 +2046,118 @@
         "inherits": ["MCU_LPC546XX"],
         "extra_labels_add": ["LPCXpresso"],
         "detect_code": ["1056"],
-        "release_versions": ["2", "5"]
+        "release_versions": ["2", "5"],
+        "components_add": ["QSPIF"]
     },
     "FF_LPC546XX": {
         "inherits": ["MCU_LPC546XX"],
         "detect_code": ["8081"],
         "device_has_remove": ["QSPI"],
         "release_versions": ["2", "5"]
+    },
+    "LPC55S69": {
+        "public": false,
+        "inherits": ["Target"],
+        "default_toolchain": "ARMC6",
+        "supported_form_factors": ["ARDUINO"],
+        "macros": [
+            "CPU_LPC55S69JBD100_cm33_core0"
+        ],
+        "extra_labels": [
+            "NXP",
+            "MCUXpresso_MCUS",
+            "LPCXpresso",
+            "LPC"
+        ],
+        "detect_code": ["0236"],
+        "device_name": "LPC55S69JBD100",
+        "release_versions": ["5"],
+        "program_cycle_s": 10,
+        "sectors": [[0,512]]
+    },
+    "LPC55S69_NS": {
+        "inherits": ["NSPE_Target", "LPC55S69"],
+        "core": "Cortex-M33FE-NS",
+        "supported_toolchains": ["ARMC6", "GCC_ARM", "IAR"],
+        "macros_add": [
+            "__STARTUP_CLEAR_BSS",
+            "MBED_FAULT_HANDLER_DISABLED",
+            "CMSIS_NVIC_VIRTUAL",
+            "MBED_MPU_CUSTOM",
+            "NXP_LPADC"
+        ],
+        "components_add": ["FLASHIAP"],
+        "extra_labels_add": [
+            "M33_NS",
+            "PSA",
+            "TFM"
+        ],
+        "device_has_add": [
+            "USTICKER",
+            "RTC",
+            "ANALOGIN",
+            "I2C",
+            "I2CSLAVE",
+            "INTERRUPTIN",
+            "PORTIN",
+            "PORTINOUT",
+            "PORTOUT",
+            "SERIAL",
+            "SERIAL_FC",
+            "SLEEP",
+            "SPI",
+            "SPISLAVE",
+            "FLASH",
+            "STDIO_MESSAGES"
+        ],
+        "post_binary_hook": {"function": "LPC55S69Code.binary_hook"},
+        "secure_image_filename": "tfm.bin",
+        "overrides": {
+            "non-secure-rom-start": "0x00030000",
+            "non-secure-rom-size": "0x68000",
+            "non-secure-ram-start": "0x20022000",
+            "non-secure-ram-size": "0x22000",
+            "secure-rom-start": "0x10000000",
+            "secure-rom-size": "0x28000",
+            "secure-ram-start": "0x30000000",
+            "secure-ram-size": "0x22000"
+        },
+        "OUTPUT_EXT": "hex",
+        "bootloader_supported": true
+    },
+    "LPC55S69_S": {
+        "inherits": ["SPE_Target", "LPC55S69"],
+        "core": "Cortex-M33FE",
+        "supported_toolchains": ["ARMC6"],
+        "macros_add": [
+            "__STARTUP_CLEAR_BSS_MULTIPLE",
+            "__STARTUP_COPY_MULTIPLE",
+            "MBED_MPU_CUSTOM",
+            "DAUTH_CHIP_DEFAULT",
+            "MBEDTLS_PSA_CRYPTO_SPM"
+        ],
+        "components_add": ["FLASHIAP"],
+        "extra_labels_add": [
+            "M33_S",
+            "PSA",
+            "TFM"
+        ],
+        "device_has_add": [
+            "FLASH",
+            "TRNG"
+        ],
+        "deliver_to_target": "LPC55S69_NS",
+        "delivery_dir": "TARGET_NXP/TARGET_MCUXpresso_MCUS/TARGET_LPC55S69/TARGET_M33_NS/prebuilt",
+        "overrides": {
+            "non-secure-rom-start": "0x00030000",
+            "non-secure-rom-size": "0x68000",
+            "non-secure-ram-start": "0x20022000",
+            "non-secure-ram-size": "0x22000",
+            "secure-rom-start": "0x10000000",
+            "secure-rom-size": "0x28000",
+            "secure-ram-start": "0x30000000",
+            "secure-ram-size": "0x22000"
+        }
     },
     "NUCLEO_F030R8": {
         "inherits": ["FAMILY_STM32"],
@@ -1983,7 +2176,7 @@
             "CMSIS_VECTAB_VIRTUAL",
             "CMSIS_VECTAB_VIRTUAL_HEADER_FILE=\"cmsis_nvic.h\""
         ],
-        "device_has_add": ["CRC", "SERIAL_FC"],
+        "device_has_add": ["CRC"],
         "device_has_remove": ["LPTICKER"],
         "default_lib": "small",
         "release_versions": ["2"],
@@ -1991,7 +2184,6 @@
     },
     "NUCLEO_F031K6": {
         "inherits": ["FAMILY_STM32"],
-        "supported_form_factors": ["ARDUINO"],
         "core": "Cortex-M0",
         "default_toolchain": "uARM",
         "extra_labels_add": ["STM32F0", "STM32F031K6"],
@@ -2008,7 +2200,7 @@
             "CMSIS_VECTAB_VIRTUAL",
             "CMSIS_VECTAB_VIRTUAL_HEADER_FILE=\"cmsis_nvic.h\""
         ],
-        "device_has_add": ["CRC", "SERIAL_FC"],
+        "device_has_add": ["CRC"],
         "device_has_remove": ["LPTICKER"],
         "default_lib": "small",
         "release_versions": ["2"],
@@ -2016,7 +2208,6 @@
     },
     "NUCLEO_F042K6": {
         "inherits": ["FAMILY_STM32"],
-        "supported_form_factors": ["ARDUINO"],
         "core": "Cortex-M0",
         "default_toolchain": "uARM",
         "extra_labels_add": ["STM32F0", "STM32F042K6"],
@@ -2033,7 +2224,10 @@
             "CMSIS_VECTAB_VIRTUAL",
             "CMSIS_VECTAB_VIRTUAL_HEADER_FILE=\"cmsis_nvic.h\""
         ],
-        "device_has_add": ["CAN", "CRC", "SERIAL_FC"],
+        "device_has_add": [
+            "CAN",
+            "CRC"
+        ],
         "device_has_remove": ["LPTICKER"],
         "default_lib": "small",
         "release_versions": ["2"],
@@ -2056,7 +2250,11 @@
             "CMSIS_VECTAB_VIRTUAL",
             "CMSIS_VECTAB_VIRTUAL_HEADER_FILE=\"cmsis_nvic.h\""
         ],
-        "device_has_add": ["CRC", "SERIAL_FC", "SERIAL_ASYNCH", "FLASH"],
+        "device_has_add": [
+            "CRC",
+            "SERIAL_ASYNCH",
+            "FLASH"
+        ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F070RB"
     },
@@ -2081,7 +2279,6 @@
             "ANALOGOUT",
             "CAN",
             "CRC",
-            "SERIAL_FC",
             "SERIAL_ASYNCH",
             "FLASH"
         ],
@@ -2109,7 +2306,6 @@
             "ANALOGOUT",
             "CAN",
             "CRC",
-            "SERIAL_FC",
             "SERIAL_ASYNCH",
             "FLASH"
         ],
@@ -2126,21 +2322,21 @@
                 "help": "Mask value : USE_PLL_HSE_EXTC (SYSCLK=72 MHz) | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI (SYSCLK=64 MHz)",
                 "value": "USE_PLL_HSE_EXTC|USE_PLL_HSI",
                 "macro_name": "CLOCK_SOURCE"
-            },
-            "clock_source_usb": {
-                "help": "In case of HSI clock source, to get 48 Mhz USB, SYSCLK has to be reduced from 64 to 48 MHz (set 0 for the max SYSCLK value)",
-                "value": "0",
-                "macro_name": "CLOCK_SOURCE_USB"
             }
         },
         "detect_code": ["0700"],
-        "device_has_add": ["CAN", "SERIAL_FC", "SERIAL_ASYNCH", "FLASH"],
+        "device_has_add": [
+            "CAN",
+            "SERIAL_ASYNCH",
+            "FLASH"
+        ],
         "device_has_remove": ["LPTICKER"],
         "release_versions": ["2", "5"],
         "device_name": "STM32F103RB"
     },
     "NUCLEO_F207ZG": {
         "inherits": ["FAMILY_STM32"],
+        "components_add": ["FLASHIAP"],
         "supported_form_factors": ["ARDUINO", "MORPHO"],
         "core": "Cortex-M3",
         "extra_labels_add": ["STM32F2", "STM32F207ZG", "STM_EMAC"],
@@ -2163,9 +2359,10 @@
             "CAN",
             "EMAC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "FLASH",
-            "MPU"
+            "TRNG",
+            "MPU",
+            "USBDEVICE"
         ],
         "device_has_remove": ["LPTICKER"],
         "release_versions": ["2", "5"],
@@ -2192,8 +2389,7 @@
             "ANALOGOUT",
             "CAN",
             "CRC",
-            "SERIAL_ASYNCH",
-            "SERIAL_FC"
+            "SERIAL_ASYNCH"
         ],
         "default_lib": "small",
         "release_versions": ["2"],
@@ -2201,7 +2397,6 @@
     },
     "NUCLEO_F303K8": {
         "inherits": ["FAMILY_STM32"],
-        "supported_form_factors": ["ARDUINO"],
         "core": "Cortex-M4F",
         "extra_labels_add": ["STM32F3", "STM32F303x8", "STM32F303K8"],
         "config": {
@@ -2214,7 +2409,11 @@
         "overrides": { "lse_available": 0 },
         "detect_code": ["0775"],
         "default_lib": "small",
-        "device_has_add": ["ANALOGOUT", "CAN", "CRC", "SERIAL_FC"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CAN",
+            "CRC"
+        ],
         "release_versions": ["2"],
         "device_name": "STM32F303K8"
     },
@@ -2230,13 +2429,13 @@
                 "macro_name": "CLOCK_SOURCE"
             }
         },
+        "components_add": ["FLASHIAP"],
         "detect_code": ["0745"],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "FLASH",
             "MPU"
         ],
@@ -2278,8 +2477,7 @@
             "ANALOGOUT",
             "CAN",
             "CRC",
-            "SERIAL_ASYNCH",
-            "SERIAL_FC"
+            "SERIAL_ASYNCH"
         ],
         "default_lib": "small",
         "release_versions": ["2"],
@@ -2299,7 +2497,11 @@
         },
         "detect_code": ["0720"],
         "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
-        "device_has_add": ["SERIAL_ASYNCH", "SERIAL_FC", "FLASH", "MPU"],
+        "device_has_add": [
+            "SERIAL_ASYNCH",
+            "FLASH",
+            "MPU"
+        ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F401RE"
     },
@@ -2315,7 +2517,11 @@
             }
         },
         "macros_add": ["USB_STM_HAL", "USBHOST_OTHER", "HSE_VALUE=25000000"],
-        "device_has_add": ["SERIAL_ASYNCH", "SERIAL_FC", "FLASH", "MPU"],
+        "device_has_add": [
+            "SERIAL_ASYNCH",
+            "FLASH",
+            "MPU"
+        ],
         "overrides": { "lse_available": 0 },
         "release_versions": ["2", "5"],
         "device_name": "STM32F401VE"
@@ -2341,12 +2547,14 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "macros_add": [
+            "MBED_TICKLESS"
+        ],
+        "overrides": { "lpticker_delay_ticks": 4, "tickless-from-us-ticker": true },
         "detect_code": ["0744"],
         "device_has_add": [
             "ANALOGOUT",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -2359,21 +2567,21 @@
         "supported_form_factors": ["ARDUINO", "MORPHO"],
         "core": "Cortex-M4F",
         "extra_labels_add": ["STM32F4", "STM32F411xE", "STM32F411RE"],
+        "components_add": ["FLASHIAP"],
         "detect_code": ["0740"],
         "config": {
             "clock_source": {
                 "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI",
                 "value": "USE_PLL_HSE_EXTC|USE_PLL_HSI",
                 "macro_name": "CLOCK_SOURCE"
-            },
-            "clock_source_usb": {
-                "help": "As 48 Mhz clock is configured for USB, SYSCLK has to be reduced from 100 to 96 MHz (set 0 for the max SYSCLK value)",
-                "value": "0",
-                "macro_name": "CLOCK_SOURCE_USB"
             }
         },
         "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
-        "device_has_add": ["SERIAL_ASYNCH", "SERIAL_FC", "FLASH", "MPU"],
+        "device_has_add": [
+            "SERIAL_ASYNCH",
+            "FLASH",
+            "MPU"
+        ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F411RE",
         "bootloader_supported": true
@@ -2395,10 +2603,10 @@
         "device_has_add": [
             "CAN",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
-            "MPU"
+            "MPU",
+            "USBDEVICE"
         ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F412ZG",
@@ -2406,6 +2614,7 @@
     },
     "MTB_MXCHIP_EMW3166": {
         "inherits": ["FAMILY_STM32"],
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "core": "Cortex-M4F",
         "extra_labels_add": [
             "STM32F4",
@@ -2418,7 +2627,6 @@
         "device_has_add": [
             "CAN",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -2439,6 +2647,7 @@
     },
     "USI_WM_BN_BM_22": {
         "inherits": ["FAMILY_STM32"],
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "components_add": ["SPIF", "FLASHIAP"],
         "core": "Cortex-M4F",
         "extra_labels_add": [
@@ -2449,11 +2658,10 @@
             "CYW4343X",
             "CORDIO"
         ],
-        "features": ["BLE", "STORAGE"],
+        "features": ["BLE"],
         "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
         "device_has_add": [
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -2492,7 +2700,7 @@
         }
     },
     "DISCO_F413ZH": {
-        "components_add": ["QSPIF"],
+        "components_add": ["QSPIF", "FLASHIAP"],
         "inherits": ["FAMILY_STM32"],
         "supported_form_factors": ["ARDUINO"],
         "core": "Cortex-M4F",
@@ -2513,18 +2721,22 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "overrides": { "lpticker_delay_ticks": 4, "tickless-from-us-ticker": true },
         "detect_code": ["0743"],
-        "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "USB_STM_HAL",
+            "USBHOST_OTHER"
+        ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "QSPI",
-            "MPU"
+            "MPU",
+            "USBDEVICE"
         ],
         "bootloader_supported": true,
         "release_versions": ["2", "5"],
@@ -2551,17 +2763,21 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "overrides": { "lpticker_delay_ticks": 4, "tickless-from-us-ticker": true},
         "detect_code": ["0743"],
-        "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "USB_STM_HAL",
+            "USBHOST_OTHER"
+        ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
-            "MPU"
+            "MPU",
+            "USBDEVICE"
         ],
         "bootloader_supported": true,
         "release_versions": ["2", "5"],
@@ -2576,6 +2792,7 @@
         "supported_toolchains": ["ARM", "uARM", "GCC_ARM"],
         "detect_code": ["----"],
         "device_has_add": ["MPU"],
+        "device_has_remove": ["SERIAL_FC"],
         "default_lib": "small",
         "release_versions": ["2"],
         "device_name": "STM32F411RE"
@@ -2594,11 +2811,6 @@
                 "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI",
                 "value": "USE_PLL_HSE_EXTC|USE_PLL_HSI",
                 "macro_name": "CLOCK_SOURCE"
-            },
-            "clock_source_usb": {
-                "help": "As 48 Mhz clock is configured for USB, SYSCLK has to be reduced from 180 to 168 MHz (set 0 for the max SYSCLK value)",
-                "value": "1",
-                "macro_name": "CLOCK_SOURCE_USB"
             }
         },
         "extra_labels_add": [
@@ -2607,18 +2819,23 @@
             "STM32F429ZI",
             "STM32F429xx",
             "STM32F429xI",
-            "STM_EMAC"
+            "STM_EMAC",
+            "PSA"
         ],
-        "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
+        "components_add": ["FLASHIAP"],
+        "macros_add": [
+            "USB_STM_HAL",
+            "USBHOST_OTHER"
+        ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "EMAC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
-            "MPU"
+            "MPU",
+            "USBDEVICE"
         ],
         "detect_code": ["0796"],
         "release_versions": ["2", "5"],
@@ -2626,6 +2843,33 @@
         "bootloader_supported": true,
         "overrides": {
             "network-default-interface-type": "ETHERNET"
+        }
+    },
+    "MTB_STM_S2LP": {
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M4F",
+        "config": {
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL (8MHz) | USE_PLL_HSI",
+                "value": "USE_PLL_HSE_XTAL",
+                "macro_name": "CLOCK_SOURCE"
+            },
+            "clock_source_usb": {
+                "help": "As 48 Mhz clock is configured for USB, SYSCLK has to be reduced from 180 to 168 MHz (set 0 for the max SYSCLK value)",
+                "value": "1",
+                "macro_name": "CLOCK_SOURCE_USB"
+            }
+        },
+        "extra_labels_add": ["STM32F4", "STM32F429", "STM32F429ZI", "STM32F429xx", "STM32F429xI"],
+        "components_add": ["FLASHIAP"],
+        "macros_add": ["USB_STM_HAL"],
+        "device_has_add": ["ANALOGOUT", "CAN", "SERIAL_ASYNCH", "TRNG", "FLASH", "MPU"],
+        "detect_code": ["0467"],
+        "release_versions": ["5"],
+        "device_name": "STM32F429ZI",
+        "bootloader_supported": true,
+        "overrides": {
+            "network-default-interface-type": "MESH"
         }
     },
     "NUCLEO_F439ZI": {
@@ -2642,11 +2886,6 @@
                 "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI",
                 "value": "USE_PLL_HSE_EXTC|USE_PLL_HSI",
                 "macro_name": "CLOCK_SOURCE"
-            },
-            "clock_source_usb": {
-                "help": "As 48 Mhz clock is configured for USB, SYSCLK has to be reduced from 180 to 168 MHz (set 0 for the max SYSCLK value)",
-                "value": "1",
-                "macro_name": "CLOCK_SOURCE_USB"
             }
         },
         "extra_labels_add": [
@@ -2666,7 +2905,7 @@
             "ANALOGOUT",
             "CAN",
             "EMAC",
-            "SERIAL_FC",
+            "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
             "MPU"
@@ -2678,6 +2917,42 @@
         "overrides": {
             "network-default-interface-type": "ETHERNET"
         }
+    },
+    "MTB_STM32_F439" : {
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M4F",
+        "config": {
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL (8MHz) | USE_PLL_HSI",
+                "value": "USE_PLL_HSE_XTAL",
+                "macro_name": "CLOCK_SOURCE"
+            }
+        },
+        "extra_labels_add": [
+            "STM32F4",
+            "STM32F439",
+            "STM32F439ZI",
+            "STM32F439xx",
+            "STM32F439xI"
+        ],
+        "macros_add": [
+            "MBEDTLS_CONFIG_HW_SUPPORT",
+            "USB_STM_HAL",
+            "USBHOST_OTHER"
+        ],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CAN",
+            "SERIAL_ASYNCH",
+            "SERIAL_FC",
+            "TRNG",
+            "FLASH",
+            "MPU"
+        ],
+        "detect_code": ["0469"],
+        "release_versions": ["5"],
+        "device_name": "STM32F439VI",
+        "bootloader_supported": true
     },
     "NUCLEO_F446RE": {
         "inherits": ["FAMILY_STM32"],
@@ -2697,7 +2972,6 @@
             "ANALOGOUT",
             "CAN",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "FLASH",
             "MPU"
         ],
@@ -2723,9 +2997,9 @@
             "ANALOGOUT",
             "CAN",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "FLASH",
-            "MPU"
+            "MPU",
+            "USBDEVICE"
         ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F446ZE"
@@ -2740,7 +3014,6 @@
             "ANALOGOUT",
             "CAN",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "FLASH",
             "MPU"
         ],
@@ -2773,8 +3046,11 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
-        "macros_add": ["USBHOST_OTHER"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "USBHOST_OTHER"
+        ],
         "supported_form_factors": ["ARDUINO"],
         "detect_code": ["0816"],
         "device_has_add": [
@@ -2785,12 +3061,14 @@
             "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
+            "USBDEVICE",
             "MPU"
         ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F746ZG",
         "bootloader_supported": true,
         "overrides": {
+            "lpticker_delay_ticks": 0,
             "network-default-interface-type": "ETHERNET"
         }
     },
@@ -2820,9 +3098,9 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
         "macros_add": [
-            "TRANSACTION_QUEUE_SIZE_SPI=2",
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
             "USBHOST_OTHER",
             "MBEDTLS_CONFIG_HW_SUPPORT"
         ],
@@ -2836,16 +3114,19 @@
             "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
+            "USBDEVICE",
             "MPU"
         ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F756ZG",
         "overrides": {
+            "lpticker_delay_ticks": 0,
             "network-default-interface-type": "ETHERNET"
         }
     },
     "NUCLEO_F767ZI": {
         "inherits": ["FAMILY_STM32"],
+        "components_add": ["FLASHIAP"],
         "core": "Cortex-M7FD",
         "extra_labels_add": [
             "STM32F7",
@@ -2874,9 +3155,12 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
         "supported_form_factors": ["ARDUINO"],
-        "macros_add": ["USBHOST_OTHER"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "USBHOST_OTHER"
+        ],
         "detect_code": ["0818"],
         "device_has_add": [
             "ANALOGOUT",
@@ -2886,14 +3170,97 @@
             "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
+            "USBDEVICE",
             "MPU"
         ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F767ZI",
         "bootloader_supported": true,
         "overrides": {
+            "lpticker_delay_ticks": 0,
             "network-default-interface-type": "ETHERNET"
         }
+    },
+    "NUCLEO_H743ZI": {
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M7FD",
+        "extra_labels_add": [
+            "STM32H7",
+            "STM32H743xI"
+        ],
+        "config": {
+            "d11_configuration": {
+                "help": "Value: PA_7 for the default board configuration, PB_5 in case of solder bridge update (SB121 off/ SB122 on)",
+                "value": "PA_7",
+                "macro_name": "STM32_D11_SPI_ETHERNET_PIN"
+            },
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI",
+                "value": "USE_PLL_HSE_EXTC|USE_PLL_HSI",
+                "macro_name": "CLOCK_SOURCE"
+            },
+            "lpticker_lptim": {
+                "help": "This target supports LPTIM. Set value 1 to use LPTIM for LPTICKER, or 0 to use RTC wakeup timer",
+                "value": 1
+            },
+            "hse_value": {
+                "help": "HSE default value is 25MHz in HAL",
+                "value": "8000000",
+                "macro_name": "HSE_VALUE"
+            }
+        },
+        "macros_add": [
+            "STM32H743xx",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "MBED_TICKLESS"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
+        "supported_form_factors": ["ARDUINO"],
+        "detect_code": ["0813"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CAN",
+            "CRC",
+            "TRNG",
+            "FLASH",
+            "MPU"
+        ],
+        "release_versions": ["2", "5"],
+        "device_name": "STM32H743ZI",
+        "bootloader_supported": true
+    },
+    "NUCLEO_H743ZI2": {
+        "inherits": ["NUCLEO_H743ZI"],
+        "overrides": { "d11_configuration": "PB_5" },
+        "detect_code": ["0836"]
+    },
+    "UHURU_RAVEN": {
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M7FD",
+        "extra_labels_add": ["STM32F7", "STM32F767", "STM32F767xI", "STM32F767VI"],
+        "config": {
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL | USE_PLL_HSI",
+                "value": "USE_PLL_HSE_XTAL",
+                "macro_name": "CLOCK_SOURCE"
+            },
+            "lowpowertimer_lptim": {
+                "help": "This target supports LPTIM. Set value 1 to use LPTIM for LOWPOWERTIMER, or 0 to use RTC wakeup timer",
+                "value": 1
+            }
+        },
+        "overrides": {
+            "lpticker_delay_ticks": 4,
+            "network-default-interface-type": "WIFI"
+        },
+        "components_add": ["SPIF"],
+        "detect_code": ["9020"],
+        "device_has_add": ["ANALOGOUT", "CAN", "CRC", "TRNG", "FLASH", "MPU"],
+        "device_has_remove": ["SERIAL_FC"],
+        "features": ["LWIP"],
+        "release_versions": ["5"],
+        "device_name": "STM32F767VI",
+        "bootloader_supported": true
     },
     "NUCLEO_L011K4": {
         "inherits": ["FAMILY_STM32"],
@@ -2913,9 +3280,15 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 4 },
+        "overrides": { "lpticker_delay_ticks": 0 },
+        "macros_add": [
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
         "detect_code": ["0780"],
-        "device_has_add": ["CRC", "SERIAL_FC", "FLASH"],
+        "device_has_add": [
+            "CRC",
+            "FLASH"
+        ],
         "default_lib": "small",
         "release_versions": ["2"],
         "device_name": "STM32L011K4"
@@ -2925,7 +3298,6 @@
         "core": "Cortex-M0+",
         "extra_labels_add": ["STM32L0", "STM32L031K6"],
         "default_toolchain": "uARM",
-        "supported_form_factors": ["ARDUINO"],
         "config": {
             "clock_source": {
                 "help": "Mask value : USE_PLL_HSE_EXTC (need HW patch) | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI",
@@ -2937,9 +3309,15 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 4 },
+        "macros_add": [
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0790"],
-        "device_has_add": ["CRC", "SERIAL_FC", "FLASH"],
+        "device_has_add": [
+            "CRC",
+            "FLASH"
+        ],
         "default_lib": "small",
         "release_versions": ["2"],
         "device_name": "STM32L031K6"
@@ -2960,12 +3338,14 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 4 },
+        "macros_add": [
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0715"],
         "device_has_add": [
             "ANALOGOUT",
             "CRC",
-            "SERIAL_FC",
             "SERIAL_ASYNCH",
             "FLASH",
             "MPU"
@@ -2990,18 +3370,22 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 4 },
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0760"],
         "device_has_add": [
             "ANALOGOUT",
             "CRC",
-            "SERIAL_FC",
             "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
             "MPU"
         ],
         "release_versions": ["2", "5"],
+        "bootloader_supported": true,
         "device_name": "STM32L073RZ"
     },
     "NUCLEO_L152RE": {
@@ -3020,7 +3404,6 @@
         "device_has_add": [
             "ANALOGOUT",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "FLASH",
             "MPU"
         ],
@@ -3029,7 +3412,6 @@
     },
     "NUCLEO_L432KC": {
         "inherits": ["FAMILY_STM32"],
-        "supported_form_factors": ["ARDUINO"],
         "core": "Cortex-M4F",
         "extra_labels_add": ["STM32L4", "STM32L432xC", "STM32L432KC"],
         "config": {
@@ -3043,12 +3425,14 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "macros_add": [
+            "MBED_TICKLESS", "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0770"],
         "device_has_add": [
             "ANALOGOUT",
             "CRC",
-            "SERIAL_FC",
             "SERIAL_ASYNCH",
             "CAN",
             "TRNG",
@@ -3075,12 +3459,14 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "macros_add": [
+            "MBED_TICKLESS", "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0779"],
         "device_has_add": [
             "ANALOGOUT",
             "CRC",
-            "SERIAL_FC",
             "SERIAL_ASYNCH",
             "CAN",
             "TRNG",
@@ -3107,7 +3493,6 @@
         "device_has_add": [
             "ANALOGOUT",
             "CRC",
-            "SERIAL_FC",
             "SERIAL_ASYNCH",
             "CAN",
             "TRNG",
@@ -3115,7 +3500,7 @@
             "MPU"
         ],
         "device_has_remove": ["LPTICKER"],
-        "macros_add": ["MBEDTLS_CONFIG_HW_SUPPORT"],
+        "macros_add": ["MBEDTLS_CONFIG_HW_SUPPORT", "MBED_SPLIT_HEAP"],
         "device_name": "STM32L443RC",
         "detect_code": ["0458"],
         "bootloader_supported": true
@@ -3136,15 +3521,19 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0765"],
-        "macros_add": ["USBHOST_OTHER", "TWO_RAM_REGIONS"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "USBHOST_OTHER",
+            "MBED_SPLIT_HEAP"
+        ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -3166,13 +3555,12 @@
             }
         },
         "detect_code": ["0766"],
-        "macros_add": ["USBHOST_OTHER", "TWO_RAM_REGIONS"],
+        "macros_add": ["USBHOST_OTHER"],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -3196,19 +3584,20 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0827"],
         "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
             "USBHOST_OTHER",
             "MBEDTLS_CONFIG_HW_SUPPORT",
-            "TWO_RAM_REGIONS"
+            "MBED_SPLIT_HEAP"
         ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -3238,13 +3627,12 @@
         "macros_add": [
             "MBEDTLS_CONFIG_HW_SUPPORT",
             "WISE_1570",
-            "TWO_RAM_REGIONS"
+            "MBED_SPLIT_HEAP"
         ],
         "device_has_add": [
             "ANALOGOUT",
             "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -3259,17 +3647,35 @@
         "inherits": ["FAMILY_STM32"],
         "supported_form_factors": ["ARDUINO"],
         "core": "Cortex-M4F",
-        "supported_toolchains": ["ARM", "uARM", "GCC_ARM"],
+        "supported_toolchains": ["ARM", "uARM", "GCC_ARM", "IAR"],
         "program_cycle_s": 2,
         "extra_labels_add": [
             "STM32F4",
             "STM32F407",
-            "STM32F407xG",
-            "STM32F407VG"
+            "STM32F407xx",
+            "STM32F407xE",
+            "STM32F407VE",
+            "STM_EMAC"
         ],
-        "device_has_add": ["ANALOGOUT", "TRNG", "FLASH", "MPU"],
-        "release_versions": ["2"],
-        "device_name": "STM32F407VG"
+        "device_has_add": ["ANALOGOUT", "TRNG", "FLASH", "EMAC", "MPU"],
+        "device_has_remove": [
+            "LPTICKER",
+            "SERIAL_FC"
+        ],
+        "macros_add": ["USB_STM_HAL"],
+        "config": {
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL | USE_PLL_HSI | USE_PLL_MSI",
+                "value": "USE_PLL_HSE_XTAL",
+                "macro_name": "CLOCK_SOURCE"
+            }
+        },
+        "release_versions": ["2", "5"],
+        "overrides": {"lse_available": 0},
+        "device_name": "STM32F407VETx",
+        "overrides": {
+            "network-default-interface-type": "ETHERNET"
+        }
     },
     "WIO_3G": {
         "inherits": ["FAMILY_STM32"],
@@ -3311,8 +3717,6 @@
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
-            "LOWPOWERTIMER",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -3352,7 +3756,13 @@
         },
         "extra_labels_add": ["STM32F4", "STM32F439", "STM32F439VI", "STM32F439xx", "STM32F439xI"],
         "macros_add": ["MBEDTLS_CONFIG_HW_SUPPORT"],
-        "device_has_add": ["ANALOGOUT", "LOWPOWERTIMER", "SERIAL_ASYNCH", "SERIAL_FC", "TRNG", "FLASH", "MPU"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "SERIAL_ASYNCH",
+            "TRNG",
+            "FLASH",
+            "MPU"
+        ],
         "detect_code": ["9015"],
         "release_versions": ["2", "5"],
         "device_name" : "STM32F439VI",
@@ -3378,7 +3788,10 @@
             "CMSIS_VECTAB_VIRTUAL",
             "CMSIS_VECTAB_VIRTUAL_HEADER_FILE=\"cmsis_nvic.h\""
         ],
-        "device_has_add": ["CRC", "SERIAL_FC", "MPU"],
+        "device_has_add": [
+            "CRC",
+            "MPU"
+        ],
         "device_has_remove": ["LPTICKER"],
         "device_name": "STM32F051R8"
     },
@@ -3410,7 +3823,12 @@
         },
         "supported_toolchains": ["ARM", "uARM", "GCC_ARM", "IAR"],
         "release_versions": ["2", "5"],
-        "device_has_add": ["ANALOGOUT", "CAN", "CRC", "SERIAL_FC", "MPU"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CAN",
+            "CRC",
+            "MPU"
+        ],
         "device_name": "STM32F303VC"
     },
     "DISCO_F334C8": {
@@ -3426,7 +3844,11 @@
         },
         "overrides": { "lse_available": 0 },
         "detect_code": ["0810"],
-        "device_has_add": ["ANALOGOUT", "CRC", "SERIAL_ASYNCH", "SERIAL_FC"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CRC",
+            "SERIAL_ASYNCH"
+        ],
         "default_lib": "small",
         "release_versions": ["2"],
         "device_name": "STM32F334C8"
@@ -3469,11 +3891,6 @@
                 "help": "Mask value : USE_PLL_HSE_EXTC (need HW patch) | USE_PLL_HSE_XTAL | USE_PLL_HSI",
                 "value": "USE_PLL_HSE_XTAL|USE_PLL_HSI",
                 "macro_name": "CLOCK_SOURCE"
-            },
-            "clock_source_usb": {
-                "help": "As 48 Mhz clock is configured for USB, SYSCLK has to be reduced from 180 to 168 MHz (set 0 for the max SYSCLK value)",
-                "value": "1",
-                "macro_name": "CLOCK_SOURCE_USB"
             }
         },
         "overrides": { "lse_available": 0 },
@@ -3482,7 +3899,6 @@
             "ANALOGOUT",
             "CAN",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -3515,14 +3931,51 @@
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "QSPI",
-            "MPU"
+            "MPU",
+            "USBDEVICE"
         ],
         "release_versions": ["2", "5"],
-        "device_name": "STM32F469NI"
+        "device_name": "STM32F469NI",
+        "bootloader_supported": true
+    },
+    "SDP_K1": {
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M4F",
+        "supported_form_factors": ["ARDUINO"],
+        "extra_labels_add": [
+            "STM32F4",
+            "STM32F469",
+            "STM32F469NI",
+            "STM32F469xI",
+            "STM32F469xx"
+        ],
+        "config": {
+            "clock_source": {
+                "help": "Clock source to use, can be XTAL or RC",
+                "value": "USE_PLL_HSE_XTAL|USE_PLL_HSI",
+                "macro_name": "CLOCK_SOURCE"
+            },
+            "clock_freq": {
+                "help": "Clock frequency in Mhz",
+                "value": "8",
+                "macro_name": "CLOCK_FREQUENCY_MHZ"
+            }
+        },
+        "overrides": {
+            "lse_available": 0
+        },
+        "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "MPU"
+        ],
+        "device_has_remove": ["LPTICKER"],
+        "device_name": "STM32F469NI",
+        "release_versions": ["5"],
+        "detect_code": ["0604"]
     },
     "DISCO_L053C8": {
         "inherits": ["FAMILY_STM32"],
@@ -3539,11 +3992,20 @@
                 "value": 1
             }
         },
-        "overrides": {
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+            "overrides": {
             "lse_available": 0,
-            "lpticker_delay_ticks": 4
+            "lpticker_delay_ticks": 0
         },
-        "device_has_add": ["ANALOGOUT", "CRC", "SERIAL_FC", "FLASH", "MPU"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CRC",
+            "FLASH",
+            "MPU"
+        ],
         "default_lib": "small",
         "release_versions": ["2"],
         "device_name": "STM32L053C8"
@@ -3569,11 +4031,15 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 4 },
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0833"],
         "device_has_add": [
             "ANALOGOUT",
-            "SERIAL_FC",
+            "CRC",
             "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
@@ -3594,7 +4060,7 @@
         "detect_code": ["0456"],
         "device_has_add": [
             "ANALOGOUT",
-            "SERIAL_FC",
+            "CRC",
             "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
@@ -3614,6 +4080,7 @@
             "STM32F746NG",
             "STM_EMAC"
         ],
+        "components_add": ["QSPIF", "FLASHIAP"],
         "supported_form_factors": ["ARDUINO"],
         "config": {
             "clock_source": {
@@ -3630,23 +4097,30 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
         "detect_code": ["0815"],
-        "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "USB_STM_HAL",
+            "USBHOST_OTHER"
+        ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
+            "CRC",
             "EMAC",
             "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
             "QSPI",
+            "USBDEVICE",
             "MPU"
         ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F746NG",
         "bootloader_supported": true,
         "overrides": {
+            "lpticker_delay_ticks": 0,
             "network-default-interface-type": "ETHERNET"
         }
     },
@@ -3660,6 +4134,7 @@
             "STM32F769NI",
             "STM_EMAC"
         ],
+        "components_add": ["QSPIF"],
         "supported_form_factors": ["ARDUINO"],
         "config": {
             "flash_dual_bank": {
@@ -3676,22 +4151,30 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
         "detect_code": ["0817"],
-        "macros_add": ["USB_STM_HAL", "USBHOST_OTHER"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "USB_STM_HAL",
+            "USBHOST_OTHER"
+        ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
+            "CRC",
             "EMAC",
             "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
-            "MPU"
+            "USBDEVICE",
+            "MPU",
+            "QSPI"
         ],
         "bootloader_supported": true,
         "release_versions": ["2", "5"],
         "device_name": "STM32F769NI",
         "overrides": {
+            "lpticker_delay_ticks": 0,
             "network-default-interface-type": "ETHERNET"
         }
     },
@@ -3711,20 +4194,56 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "overrides": { "lpticker_delay_ticks": 0 },
         "supported_form_factors": ["ARDUINO"],
         "detect_code": ["0764"],
-        "macros_add": ["USBHOST_OTHER", "TWO_RAM_REGIONS"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "USBHOST_OTHER",
+            "MBED_SPLIT_HEAP"
+        ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
-            "SERIAL_FC",
+            "CRC",
             "TRNG",
             "FLASH",
             "QSPI",
+            "USBDEVICE",
             "MPU"
         ],
         "release_versions": ["2", "5"],
+        "device_name": "STM32L475VG",
+        "bootloader_supported": true
+    },
+    "MTB_STM_L475": {
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M4F",
+        "extra_labels_add": ["STM32L4", "STM32L475xG", "STM32L475VG"],
+        "config": {
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC | USE_PLL_HSE_XTAL (8MHz) | USE_PLL_HSI | USE_PLL_MSI",
+                "value": "USE_PLL_HSE_XTAL",
+                "macro_name": "CLOCK_SOURCE"
+            },
+            "lpticker_lptim": {
+                "help": "This target supports LPTIM. Set value 1 to use LPTIM for LPTICKER, or 0 to use RTC wakeup timer",
+                "value": 0
+            }
+        },
+        "detect_code": ["0468"],
+        "macros_add": ["USBHOST_OTHER", "MBED_SPLIT_HEAP"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CAN",
+            "CRC",
+            "SERIAL_FC",
+            "TRNG",
+            "FLASH",
+            "MPU"
+        ],
+        "release_versions": ["5"],
         "device_name": "STM32L475VG",
         "bootloader_supported": true
     },
@@ -3744,12 +4263,56 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0820"],
-        "macros_add": ["USBHOST_OTHER", "TWO_RAM_REGIONS"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "USBHOST_OTHER",
+            "MBED_SPLIT_HEAP"
+        ],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
+            "CRC",
+            "TRNG",
+            "FLASH",
+            "QSPI",
+            "USBDEVICE",
+            "MPU"
+        ],
+        "release_versions": ["2", "5"],
+        "device_name": "STM32L476VG",
+        "bootloader_supported": true
+    },
+    "RHOMBIO_L476DMW1K": {
+        "components_add": ["QSPIF", "FLASHIAP"],
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M4F",
+        "extra_labels_add": ["STM32L4", "STM32L476xG", "STM32L476VG"],
+        "config": {
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC (need HW patch) | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI | USE_PLL_MSI",
+                "value": "USE_PLL_MSI",
+                "macro_name": "CLOCK_SOURCE"
+            },
+            "lpticker_lptim": {
+                "help": "This target supports LPTIM. Set value 1 to use LPTIM for LPTICKER, or 0 to use RTC wakeup timer",
+                "value": 1
+            }
+        },
+        "overrides": { "lpticker_delay_ticks": 0 },
+        "detect_code": ["1500"],
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED",
+            "USBHOST_OTHER",
+            "MBED_SPLIT_HEAP"
+        ],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CAN",
+            "CRC",
             "SERIAL_FC",
             "TRNG",
             "FLASH",
@@ -3784,6 +4347,9 @@
             "toolchains": ["GCC_ARM", "ARM_STD", "ARM_MICRO", "IAR"]
         },
         "device_has_add": ["MPU"],
+        "device_has_remove": [
+            "SERIAL_FC"
+        ],
         "release_versions": ["2", "5"],
         "device_name": "STM32F411RE"
     },
@@ -3791,7 +4357,7 @@
         "inherits": ["FAMILY_STM32"],
         "core": "Cortex-M4F",
         "extra_labels_add": ["STM32F4", "STM32F411RE"],
-        "device_has_add": ["MPU"],
+        "components_add": ["FLASHIAP"],
         "config": {
             "modem_is_on_board": {
                 "help": "Value: Tells the build system that the modem is on-board as oppose to a plug-in shield/module.",
@@ -3805,14 +4371,18 @@
             }
         },
         "overrides": { "lse_available": 0 },
-        "macros_add": ["HSE_VALUE=26000000", "VECT_TAB_OFFSET=0x08010000"],
+        "macros_add": ["HSE_VALUE=26000000"],
         "post_binary_hook": {
             "function": "MTSCode.combine_bins_mts_dragonfly",
             "toolchains": ["GCC_ARM", "ARM_STD", "ARM_MICRO", "IAR"]
         },
-        "device_has_add": ["MPU"],
+        "device_has_add": ["MPU", "FLASH"],
+        "device_has_remove": [
+            "SERIAL_FC"
+        ],
         "release_versions": ["2", "5"],
-        "device_name": "STM32F411RE"
+        "device_name": "STM32F411RE",
+        "bootloader_supported": true
     },
     "MTS_DRAGONFLY_L471QG": {
         "inherits": ["FAMILY_STM32"],
@@ -3841,16 +4411,18 @@
                 "macro_name": "MODEM_ON_BOARD_UART"
             }
         },
-        "macros_add": ["TWO_RAM_REGIONS"],
         "detect_code": ["0312"],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
+            "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
+        ],
+        "macros_add": [
+            "MBED_SPLIT_HEAP"
         ],
         "release_versions": ["2", "5"],
         "device_name": "STM32L471QG",
@@ -3877,6 +4449,9 @@
         },
         "macros_add": ["HSE_VALUE=26000000", "VECT_TAB_OFFSET=0x08010000"],
         "device_has_add": ["MPU"],
+        "device_has_remove": [
+            "SERIAL_FC"
+        ],
         "post_binary_hook": {
             "function": "MTSCode.combine_bins_mtb_mts_dragonfly",
             "toolchains": ["GCC_ARM", "ARM_STD", "ARM_MICRO", "IAR"]
@@ -3898,12 +4473,14 @@
         },
         "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "device_has_add": ["ANALOGOUT", "FLASH", "MPU"],
+        "device_has_remove": [
+            "SERIAL_FC"
+        ],
         "release_versions": ["5"],
         "device_name": "STM32L151CC",
         "bootloader_supported": true
     },
     "FF1705_L151CC": {
-        "supported_form_factors": ["ARDUINO"],
         "inherits": ["XDOT_L151CC"],
         "detect_code": ["8080"]
     },
@@ -3924,6 +4501,9 @@
         },
         "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "device_has_add": ["ANALOGOUT", "FLASH", "MPU"],
+        "device_has_remove": [
+            "SERIAL_FC"
+        ],
         "release_versions": ["5"],
         "device_name": "STM32L151CC",
         "bootloader_supported": true
@@ -3935,6 +4515,9 @@
         "extra_labels_add": ["STM32L1", "STM32L151xBA", "STM32L151CBA"],
         "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "device_has_add": ["ANALOGOUT", "MPU"],
+        "device_has_remove": [
+            "SERIAL_FC"
+        ],
         "release_versions": ["5"],
         "device_name": "STM32L151CBxxA",
         "bootloader_supported": true
@@ -3948,6 +4531,7 @@
         "extra_labels_add": ["STM32L1", "STM32L152RC"],
         "detect_code": ["4100"],
         "device_has_add": ["ANALOGOUT", "SERIAL_ASYNCH", "FLASH", "MPU"],
+        "device_has_remove": ["SERIAL_FC"],
         "release_versions": ["2", "5"],
         "device_name": "STM32L152RC"
     },
@@ -4001,7 +4585,6 @@
             "TRNG",
             "FLASH",
             "WIFI",
-            "SERIAL_FC",
             "SERIAL"
         ],
         "features": ["BLE"],
@@ -4025,6 +4608,8 @@
         "supported_form_factors": ["ARDUINO"],
         "release_versions": ["5"],
         "device_has_remove": [],
+        "extra_labels_add": ["PSA"],
+        "components_add": ["SD", "FLASHIAP"],
         "config": {
             "stdio_uart_tx_help": {
                 "help": "Value: D8(default) or D1"
@@ -4057,6 +4642,7 @@
     "MTB_UBLOX_ODIN_W2": {
         "inherits": ["MODULE_UBLOX_ODIN_W2"],
         "device_has_add": [],
+        "overrides": {"lse_available": 0},
         "release_versions": ["5"]
     },
     "UBLOX_C030": {
@@ -4089,11 +4675,9 @@
             "HSE_VALUE=12000000",
             "GNSSBAUD=9600"
         ],
-        "overrides": { "lse_available": 0 },
         "device_has_add": [
             "ANALOGOUT",
             "EMAC",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
             "MPU"
@@ -4102,19 +4686,29 @@
         "device_name": "STM32F437VG",
         "bootloader_supported": true,
         "overrides": {
+            "lse_available": 0,
             "network-default-interface-type": "ETHERNET"
         }
     },
     "UBLOX_C030_U201": {
         "inherits": ["UBLOX_C030"],
+        "components_add": ["SD", "FLASHIAP"],
         "release_versions": ["5"]
     },
     "UBLOX_C030_N211": {
         "inherits": ["UBLOX_C030"],
         "release_versions": ["5"]
     },
-    "UBLOX_C030_R410M": {
+    "UBLOX_C030_R41XM": {
         "inherits": ["UBLOX_C030"],
+        "release_versions": ["5"]
+    },
+    "UBLOX_C030_R410M": {
+        "inherits": ["UBLOX_C030_R41XM"],
+        "release_versions": ["5"]
+    },
+    "UBLOX_C030_R412M": {
+        "inherits": ["UBLOX_C030_R41XM"],
         "release_versions": ["5"]
     },
     "NZ32_SC151": {
@@ -4400,7 +4994,6 @@
         "macros_add": ["TARGET_RBLAB_BLENANO"]
     },
     "RBLAB_BLENANO2": {
-        "supported_form_factors": ["ARDUINO"],
         "inherits": ["MCU_NRF52832"],
         "release_versions": ["5"],
         "device_name": "nRF52832_xxAA"
@@ -4673,7 +5266,7 @@
     "ARM_MPS2_M0": {
         "inherits": ["ARM_MPS2_Target"],
         "core": "Cortex-M0",
-        "supported_toolchains": ["ARM"],
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "extra_labels": ["ARM_SSG", "MPS2", "MPS2_M0"],
         "macros": [
             "CMSDK_CM0",
@@ -4691,18 +5284,19 @@
             "PORTINOUT",
             "PORTOUT",
             "SERIAL",
-            "SERIAL_FC",
             "SPI",
             "SPISLAVE",
             "TSC",
-            "MPU"
+            "USTICKER"
         ],
-        "release_versions": ["2"]
+        "release_versions": ["2", "5"],
+        "copy_method": "mps2",
+        "reset_method": "reboot.txt"
     },
     "ARM_MPS2_M0P": {
         "inherits": ["ARM_MPS2_Target"],
         "core": "Cortex-M0+",
-        "supported_toolchains": ["ARM"],
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "extra_labels": ["ARM_SSG", "MPS2", "MPS2_M0P"],
         "macros": ["CMSDK_CM0plus"],
         "device_has": [
@@ -4716,18 +5310,19 @@
             "PORTINOUT",
             "PORTOUT",
             "SERIAL",
-            "SERIAL_FC",
             "SPI",
             "SPISLAVE",
             "TSC",
-            "MPU"
+            "USTICKER"
         ],
-        "release_versions": ["2"]
+        "release_versions": ["2", "5"],
+        "copy_method": "mps2",
+        "reset_method": "reboot.txt"
     },
     "ARM_MPS2_M3": {
         "inherits": ["ARM_MPS2_Target"],
         "core": "Cortex-M3",
-        "supported_toolchains": ["ARM"],
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "extra_labels": ["ARM_SSG", "MPS2", "MPS2_M3"],
         "macros": ["CMSDK_CM3"],
         "device_has": [
@@ -4741,18 +5336,20 @@
             "PORTINOUT",
             "PORTOUT",
             "SERIAL",
-            "SERIAL_FC",
             "SPI",
             "SPISLAVE",
             "TSC",
-            "MPU"
+            "MPU",
+            "USTICKER"
         ],
-        "release_versions": ["2"]
+        "release_versions": ["2", "5"],
+        "copy_method": "mps2",
+        "reset_method": "reboot.txt"
     },
     "ARM_MPS2_M4": {
         "inherits": ["ARM_MPS2_Target"],
         "core": "Cortex-M4F",
-        "supported_toolchains": ["ARM"],
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "extra_labels": ["ARM_SSG", "MPS2", "MPS2_M4"],
         "macros": ["CMSDK_CM4"],
         "device_has": [
@@ -4766,18 +5363,20 @@
             "PORTINOUT",
             "PORTOUT",
             "SERIAL",
-            "SERIAL_FC",
             "SPI",
             "SPISLAVE",
             "TSC",
-            "MPU"
+            "MPU",
+            "USTICKER"
         ],
-        "release_versions": ["2"]
+        "release_versions": ["2", "5"],
+        "copy_method": "mps2",
+        "reset_method": "reboot.txt"
     },
     "ARM_MPS2_M7": {
         "inherits": ["ARM_MPS2_Target"],
-        "core": "Cortex-M7",
-        "supported_toolchains": ["ARM"],
+        "core": "Cortex-M7FD",
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "extra_labels": ["ARM_SSG", "MPS2", "MPS2_M7"],
         "macros": ["CMSDK_CM7"],
         "device_has": [
@@ -4791,13 +5390,15 @@
             "PORTINOUT",
             "PORTOUT",
             "SERIAL",
-            "SERIAL_FC",
             "SPI",
             "SPISLAVE",
             "TSC",
-            "MPU"
+            "MPU",
+            "USTICKER"
         ],
-        "release_versions": ["2"]
+        "release_versions": ["2", "5"],
+        "copy_method": "mps2",
+        "reset_method": "reboot.txt"
     },
     "ARM_IOTSS_Target": {
         "inherits": ["Target"],
@@ -4813,7 +5414,6 @@
             "PORTINOUT",
             "PORTOUT",
             "SERIAL",
-            "SERIAL_FC",
             "SPI",
             "SPISLAVE",
             "TSC",
@@ -4837,7 +5437,6 @@
             "PORTINOUT",
             "PORTOUT",
             "SERIAL",
-            "SERIAL_FC",
             "SPI",
             "SPISLAVE",
             "TSC",
@@ -4878,42 +5477,59 @@
             "target.network-default-interface-type": "ETHERNET"
         }
     },
-    "ARM_BEETLE_SOC": {
-        "inherits": ["ARM_IOTSS_Target"],
-        "core": "Cortex-M3",
-        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
-        "default_toolchain": "ARM",
-        "extra_labels": ["ARM_SSG", "BEETLE"],
+    "ARM_MUSCA_A1": {
+        "public": false,
+        "inherits": ["Target"],
+        "default_toolchain": "ARMC6",
+        "extra_labels": ["ARM_SSG", "MUSCA_A1"],
+        "forced_reset_timeout": 7,
+        "release_versions": ["5"]
+    },
+    "ARM_MUSCA_A1_NS": {
+        "inherits": ["NSPE_Target", "ARM_MUSCA_A1"],
+        "core": "Cortex-M33-NS",
+        "supported_toolchains": ["ARMC6", "GCC_ARM", "IAR"],
+        "device_has_add": ["INTERRUPTIN", "LPTICKER", "SERIAL", "SLEEP", "USTICKER"],
         "macros": [
-            "CMSDK_BEETLE",
-            "WSF_MS_PER_TICK=20",
-            "WSF_TOKEN_ENABLED=FALSE",
-            "WSF_TRACE_ENABLED=TRUE",
-            "WSF_ASSERT_ENABLED=FALSE",
-            "WSF_PRINTF_MAX_LEN=128",
-            "ASIC",
-            "CONFIG_HOST_REV=0x20",
-            "CONFIG_ALLOW_DEEP_SLEEP=FALSE",
-            "HCI_VS_TARGET",
-            "CONFIG_ALLOW_SETTING_WRITE=TRUE",
-            "WSF_MAX_HANDLERS=20",
-            "NO_LEDS"
+            "__STARTUP_CLEAR_BSS",
+            "MBED_FAULT_HANDLER_DISABLED",
+            "CMSIS_NVIC_VIRTUAL",
+            "LPTICKER_DELAY_TICKS=1",
+            "MBED_MPU_CUSTOM"
         ],
-        "device_has": [
-            "ANALOGIN",
-            "CLCD",
-            "I2C",
-            "INTERRUPTIN",
-            "PORTIN",
-            "PORTINOUT",
-            "PORTOUT",
-            "SERIAL",
-            "SLEEP",
-            "SPI",
-            "MPU"
+        "extra_labels_add": ["MUSCA_A1_NS", "PSA", "TFM"],
+        "post_binary_hook": {"function": "ArmMuscaA1Code.binary_hook"},
+        "secure_image_filename": "tfm.bin",
+        "overrides": {
+            "non-secure-rom-start": "0x000a0400",
+            "non-secure-rom-size": "0x5f800",
+            "non-secure-ram-start": "0x20011000",
+            "non-secure-ram-size": "0xf000"
+        }
+    },
+    "ARM_MUSCA_A1_S": {
+        "inherits": ["SPE_Target", "ARM_MUSCA_A1"],
+        "core": "Cortex-M33",
+        "supported_toolchains": ["ARMC6", "GCC_ARM"],
+        "device_has_add": ["FLASH"],
+        "macros": [
+            "__STARTUP_CLEAR_BSS_MULTIPLE",
+            "__STARTUP_COPY_MULTIPLE",
+            "MBED_MPU_CUSTOM",
+            "DAUTH_CHIP_DEFAULT",
+            "MBEDTLS_PSA_CRYPTO_SPM",
+            "MBEDTLS_ENTROPY_NV_SEED"
         ],
-        "features": ["BLE"],
-        "release_versions": ["2", "5"]
+        "components_add": ["FLASHIAP"],
+        "extra_labels_add": ["MUSCA_A1_S", "PSA", "TFM"],
+        "deliver_to_target": "ARM_MUSCA_A1_NS",
+        "delivery_dir": "TARGET_ARM_SSG/TARGET_MUSCA_A1/TARGET_MUSCA_A1_NS/prebuilt",
+        "overrides": {
+            "secure-rom-start": "0x10020400",
+            "secure-rom-size": "0x7f800",
+            "secure-ram-start": "0x30000000",
+            "secure-ram-size": "0x11000"
+        }
     },
     "RZ_A1XX": {
         "inherits": ["Target"],
@@ -4953,7 +5569,7 @@
         "supported_form_factors": ["ARDUINO"],
         "extra_labels_add": ["RZA1H", "MBRZA1H", "RZ_A1_EMAC"],
         "components_add": ["SD"],
-        "device_has_add": ["EMAC", "FLASH", "LPTICKER"],
+        "device_has_add": ["USBDEVICE", "EMAC", "FLASH", "LPTICKER"],
         "release_versions": ["2", "5"],
         "device_name": "R7S72100",
         "bootloader_supported": true
@@ -4966,10 +5582,11 @@
     },
     "GR_LYCHEE": {
         "inherits": ["RZ_A1XX"],
+        "components_add": ["SD", "FLASHIAP"],
         "supported_form_factors": ["ARDUINO"],
         "extra_labels_add": ["RZA1UL", "MBRZA1LU"],
         "components_add": ["SD"],
-        "device_has_add": ["TRNG", "FLASH", "LPTICKER"],
+        "device_has_add": ["USBDEVICE", "TRNG", "FLASH", "LPTICKER"],
         "device_has_remove": ["ETHERNET"],
         "release_versions": ["2", "5"],
         "device_name": "R7S72103",
@@ -5021,7 +5638,8 @@
             "SERIAL_FC",
             "SLEEP",
             "SPI",
-            "STDIO_MESSAGES"
+            "STDIO_MESSAGES",
+            "USTICKER"
         ],
         "release_versions": ["2", "5"]
     },
@@ -5061,6 +5679,7 @@
         "supported_toolchains": ["GCC_ARM", "IAR", "ARM"],
         "device_has": [
             "ANALOGIN",
+            "FLASH",
             "I2C",
             "INTERRUPTIN",
             "LPTICKER",
@@ -5091,6 +5710,7 @@
         "supported_toolchains": ["GCC_ARM", "IAR", "ARM"],
         "device_has": [
             "ANALOGIN",
+            "FLASH",
             "I2C",
             "INTERRUPTIN",
             "LPTICKER",
@@ -5218,6 +5838,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "RTC",
             "SERIAL",
             "SERIAL_ASYNCH",
@@ -5229,7 +5850,8 @@
             "USTICKER",
             "FLASH",
             "ITM",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 2,
         "config": {
@@ -5295,6 +5917,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "RTC",
             "SERIAL",
             "SERIAL_ASYNCH",
@@ -5305,7 +5928,8 @@
             "STDIO_MESSAGES",
             "USTICKER",
             "FLASH",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 2,
         "device_name": "EFM32LG990F256",
@@ -5373,6 +5997,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "RTC",
             "SERIAL",
             "SERIAL_ASYNCH",
@@ -5383,7 +6008,8 @@
             "STDIO_MESSAGES",
             "USTICKER",
             "FLASH",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 2,
         "config": {
@@ -5449,6 +6075,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "SERIAL",
             "SERIAL_ASYNCH",
             "SLEEP",
@@ -5456,7 +6083,8 @@
             "SPISLAVE",
             "SPI_ASYNCH",
             "STDIO_MESSAGES",
-            "USTICKER"
+            "USTICKER",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 2,
         "config": {
@@ -5522,6 +6150,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "SERIAL",
             "SERIAL_ASYNCH",
             "SLEEP",
@@ -5529,7 +6158,8 @@
             "SPISLAVE",
             "SPI_ASYNCH",
             "STDIO_MESSAGES",
-            "USTICKER"
+            "USTICKER",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 2,
         "config": {
@@ -5595,6 +6225,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "RTC",
             "SERIAL",
             "SERIAL_ASYNCH",
@@ -5605,7 +6236,8 @@
             "STDIO_MESSAGES",
             "USTICKER",
             "FLASH",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 2,
         "config": {
@@ -5694,6 +6326,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "RTC",
             "SERIAL",
             "SERIAL_ASYNCH",
@@ -5704,7 +6337,8 @@
             "STDIO_MESSAGES",
             "USTICKER",
             "FLASH",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 2,
         "config": {
@@ -5764,6 +6398,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "RTC",
             "SERIAL",
             "SERIAL_ASYNCH",
@@ -5774,7 +6409,8 @@
             "STDIO_MESSAGES",
             "USTICKER",
             "FLASH",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 5,
         "config": {
@@ -5841,6 +6477,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "RTC",
             "SERIAL",
             "SERIAL_ASYNCH",
@@ -5852,7 +6489,8 @@
             "USTICKER",
             "TRNG",
             "FLASH",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 2,
         "config": {
@@ -5929,6 +6567,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "RTC",
             "SERIAL",
             "SERIAL_ASYNCH",
@@ -5940,7 +6579,8 @@
             "USTICKER",
             "TRNG",
             "FLASH",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "forced_reset_timeout": 5,
         "config": {
@@ -5998,6 +6638,7 @@
         "device_name": "EFM32GG11B820F2048GL192",
         "device_has": [
             "ANALOGIN",
+            "CAN",
             "CRC",
             "EMAC",
             "I2C",
@@ -6091,7 +6732,8 @@
             "SERIAL",
             "SPI",
             "SPISLAVE",
-            "STDIO_MESSAGES"
+            "STDIO_MESSAGES",
+            "USTICKER"
         ],
         "release_versions": ["2", "5"]
     },
@@ -6116,7 +6758,8 @@
             "SERIAL",
             "SPI",
             "SPISLAVE",
-            "STDIO_MESSAGES"
+            "STDIO_MESSAGES",
+            "USTICKER"
         ],
         "release_versions": ["2", "5"]
     },
@@ -6140,7 +6783,8 @@
             "SERIAL",
             "SPI",
             "SPISLAVE",
-            "STDIO_MESSAGES"
+            "STDIO_MESSAGES",
+            "USTICKER"
         ],
         "release_versions": ["2", "5"]
     },
@@ -6155,7 +6799,7 @@
             "TC_ASYNC=true"
         ],
         "extra_labels": ["Atmel", "SAM_CortexM0P", "SAMR21"],
-        "supported_toolchains": ["GCC_ARM", "ARM", "uARM"],
+        "supported_toolchains": ["GCC_ARM", "ARMC5", "uARM"],
         "device_has": [
             "ANALOGIN",
             "I2C",
@@ -6166,6 +6810,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "SERIAL",
             "SERIAL_ASYNCH",
             "SERIAL_FC",
@@ -6188,7 +6833,7 @@
             "TC_ASYNC=true"
         ],
         "extra_labels": ["Atmel", "SAM_CortexM0P", "SAMD21"],
-        "supported_toolchains": ["GCC_ARM", "ARM", "uARM"],
+        "supported_toolchains": ["GCC_ARM", "ARMC5", "uARM"],
         "device_has": [
             "ANALOGIN",
             "ANALOGOUT",
@@ -6222,7 +6867,7 @@
             "TC_ASYNC=true"
         ],
         "extra_labels": ["Atmel", "SAM_CortexM0P", "SAMD21"],
-        "supported_toolchains": ["GCC_ARM", "ARM", "uARM"],
+        "supported_toolchains": ["GCC_ARM", "ARMC5", "uARM"],
         "device_has": [
             "ANALOGIN",
             "ANALOGOUT",
@@ -6256,7 +6901,7 @@
             "TC_ASYNC=true"
         ],
         "extra_labels": ["Atmel", "SAM_CortexM0P", "SAML21"],
-        "supported_toolchains": ["GCC_ARM", "ARM", "uARM"],
+        "supported_toolchains": ["GCC_ARM", "ARMC5", "uARM"],
         "device_has": [
             "ANALOGIN",
             "ANALOGOUT",
@@ -6280,7 +6925,7 @@
     },
     "SAMG55J19": {
         "inherits": ["Target"],
-        "core": "Cortex-M4",
+        "core": "Cortex-M4F",
         "extra_labels": ["Atmel", "SAM_CortexM4", "SAMG55"],
         "macros": [
             "__SAMG55J19__",
@@ -6501,14 +7146,17 @@
     "MCU_NRF52832": {
         "inherits": ["Target"],
         "core": "Cortex-M4F",
+        "static_memory_defines": false,
         "macros": [
             "BOARD_PCA10040",
             "NRF52",
             "TARGET_NRF52832",
             "CMSIS_VECTAB_VIRTUAL",
             "CMSIS_VECTAB_VIRTUAL_HEADER_FILE=\"cmsis_nvic.h\"",
-            "MBED_TICKLESS"
+            "MBED_TICKLESS",
+            "MBED_MPU_CUSTOM"
         ],
+        "features": ["BLE"],
         "device_has": [
             "ANALOGIN",
             "FLASH",
@@ -6517,7 +7165,6 @@
             "INTERRUPTIN",
             "ITM",
             "LPTICKER",
-            "MPU",
             "PORTIN",
             "PORTINOUT",
             "PORTOUT",
@@ -6536,10 +7183,11 @@
             "NORDIC",
             "NRF5x",
             "NRF52",
-            "SDK_14_2",
-            "NORDIC_SOFTDEVICE",
-            "SOFTDEVICE_COMMON",
-            "SOFTDEVICE_S132_FULL"
+            "SDK_15_0",
+            "CORDIO",
+            "CORDIO_LL",
+            "SOFTDEVICE_NONE",
+            "NORDIC_CORDIO"
         ],
         "config": {
             "lf_clock_src": {
@@ -6571,7 +7219,8 @@
         "device_name": "nRF52832_xxAA",
         "macros_add": [
             "WSF_MAX_HANDLERS=10"
-        ]
+        ],
+        "device_has_remove": ["ITM"]
     },
     "SDT52832B": {
         "inherits": ["MCU_NRF52832"],
@@ -6615,11 +7264,14 @@
         "supported_form_factors": ["ARDUINO"],
         "inherits": ["MCU_NRF52832"],
         "release_versions": ["5"],
-        "device_name": "nRF52832_xxAA"
+        "device_name": "nRF52832_xxAA",
+        "device_has_remove": ["ITM"]
     },
     "MCU_NRF52840": {
         "inherits": ["Target"],
+        "components_add": ["QSPIF"],
         "core": "Cortex-M4F",
+        "static_memory_defines": false,
         "macros": [
             "BOARD_PCA10056",
             "NRF52840_XXAA",
@@ -6628,9 +7280,10 @@
             "CMSIS_VECTAB_VIRTUAL_HEADER_FILE=\"cmsis_nvic.h\"",
             "MBED_TICKLESS",
             "MBEDTLS_CONFIG_HW_SUPPORT",
-            "WSF_MAX_HANDLERS=10"
+            "WSF_MAX_HANDLERS=10",
+            "MBED_MPU_CUSTOM"
         ],
-        "features": ["CRYPTOCELL310"],
+        "features": ["CRYPTOCELL310", "BLE"],
         "device_has": [
             "ANALOGIN",
             "FLASH",
@@ -6639,7 +7292,6 @@
             "INTERRUPTIN",
             "ITM",
             "LPTICKER",
-            "MPU",
             "PORTIN",
             "PORTINOUT",
             "PORTOUT",
@@ -6653,16 +7305,18 @@
             "SYSTICK_CLK_OFF_DURING_SLEEP",
             "TRNG",
             "USTICKER",
-            "QSPI"
+            "QSPI",
+            "USBDEVICE"
         ],
         "extra_labels": [
             "NORDIC",
             "NRF5x",
             "NRF52",
-            "SDK_14_2",
-            "NORDIC_SOFTDEVICE",
-            "SOFTDEVICE_COMMON",
-            "SOFTDEVICE_S140_FULL"
+            "SDK_15_0",
+            "CORDIO",
+            "CORDIO_LL",
+            "SOFTDEVICE_NONE",
+            "NORDIC_CORDIO"
         ],
         "config": {
             "lf_clock_src": {
@@ -6678,6 +7332,9 @@
                 "macro_name": "MBED_CONF_NORDIC_NRF_LF_CLOCK_CALIB_MODE_CONFIG",
                 "value": 0
             }
+        },
+        "overrides": {
+            "mpu-rom-end": "0x1fffffff"
         },
         "OUTPUT_EXT": "hex",
         "is_disk_virtual": true,
@@ -6700,6 +7357,7 @@
         "detect_code": ["0465"],
         "features_remove": ["CRYPTOCELL310"],
         "macros_remove": ["MBEDTLS_CONFIG_HW_SUPPORT"],
+        "macros_add": ["NRFX_RNG_ENABLED=1", "RNG_ENABLED=1", "NRF_QUEUE_ENABLED=1"],
         "overrides": {
             "lf_clock_src": "NRF_LF_SRC_RC"
         }
@@ -6710,11 +7368,16 @@
         "default_toolchain": "GCC_ARM",
         "extra_labels_add": ["STM32F1", "STM32F103C8"],
         "supported_toolchains": ["GCC_ARM"],
-        "device_has_add": ["CAN", "SERIAL_FC", "SERIAL_ASYNCH", "FLASH"],
+        "device_has_add": [
+            "CAN",
+            "SERIAL_ASYNCH",
+            "FLASH"
+        ],
         "device_has_remove": ["STDIO_MESSAGES", "LPTICKER"]
     },
     "NUMAKER_PFM_NUC472": {
         "core": "Cortex-M4F",
+        "components_add": ["FLASHIAP"],
         "default_toolchain": "ARM",
         "extra_labels": [
             "NUVOTON",
@@ -6770,13 +7433,15 @@
             "CAN",
             "FLASH",
             "EMAC",
-            "MPU"
+            "MPU",
+            "WATCHDOG"
         ],
         "release_versions": ["5"],
         "device_name": "NUC472HI8AE",
         "bootloader_supported": true,
         "overrides": {
-            "network-default-interface-type": "ETHERNET"
+            "network-default-interface-type": "ETHERNET",
+            "tickless-from-us-ticker": true
         }
     },
     "NCS36510": {
@@ -6830,13 +7495,14 @@
             "PORTOUT",
             "PWMOUT",
             "SERIAL",
-            "SERIAL_FC",
             "SLEEP",
             "SPI",
             "TRNG",
             "SPISLAVE",
+            "WATCHDOG",
             "802_15_4_PHY",
-            "MPU"
+            "MPU",
+            "USTICKER"
         ],
         "release_versions": ["2", "5"]
     },
@@ -6896,11 +7562,17 @@
             "SPI_ASYNCH",
             "CAN",
             "FLASH",
-            "MPU"
+            "MPU",
+            "WATCHDOG",
+            "RESET_REASON"
         ],
+        "components_add": ["FLASHIAP"],
         "release_versions": ["2", "5"],
         "device_name": "M453VG6AE",
-        "bootloader_supported": true
+        "bootloader_supported": true,
+        "overrides": {
+            "tickless-from-us-ticker": true
+        }
     },
     "NUMAKER_PFM_NANO130": {
         "core": "Cortex-M0",
@@ -6959,10 +7631,15 @@
             "SLEEP",
             "SPI",
             "SPISLAVE",
-            "SPI_ASYNCH"
+            "SPI_ASYNCH",
+            "WATCHDOG",
+            "RESET_REASON"
         ],
         "release_versions": ["5"],
-        "device_name": "NANO130KE3BN"
+        "device_name": "NANO130KE3BN",
+        "overrides": {
+            "tickless-from-us-ticker": true
+        }
     },
     "HI2110": {
         "inherits": ["Target"],
@@ -7033,12 +7710,12 @@
             "FLASH"
         ],
         "public": false,
-        "supported_toolchains": ["GCC_ARM", "ARM", "IAR"],
+        "supported_toolchains": ["GCC_ARM", "ARM"],
         "post_binary_hook": {
             "function": "RTL8195ACode.binary_hook",
             "toolchains": ["ARM_STD", "GCC_ARM", "IAR"]
         },
-        "release_versions": ["5"],
+        "release_versions": [],
         "overrides": {
             "network-default-interface-type": "WIFI"
         }
@@ -7101,9 +7778,10 @@
     },
     "DISCO_L496AG": {
         "inherits": ["FAMILY_STM32"],
-        "supported_form_factors": ["ARDUINO"],
+        "supported_form_factors": ["ARDUINO", "STMOD", "PMOD"],
         "core": "Cortex-M4F",
         "extra_labels_add": ["STM32L4", "STM32L496AG", "STM32L496xG"],
+        "components_add": ["QSPIF"],
         "config": {
             "clock_source": {
                 "help": "Mask value : USE_PLL_HSE_EXTC (need HW patch) | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI | USE_PLL_MSI",
@@ -7115,17 +7793,22 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0822"],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
-            "MPU"
+            "MPU",
+            "USBDEVICE",
+            "QSPI"
         ],
         "release_versions": ["2", "5"],
         "device_name": "STM32L496AG",
@@ -7147,16 +7830,20 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0823"],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
             "TRNG",
             "FLASH",
+            "USBDEVICE",
             "MPU"
         ],
         "release_versions": ["2", "5"],
@@ -7183,20 +7870,97 @@
                 "value": 1
             }
         },
-        "overrides": { "lpticker_delay_ticks": 3 },
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
         "detect_code": ["0776"],
         "device_has_add": [
             "ANALOGOUT",
             "CAN",
             "CRC",
             "SERIAL_ASYNCH",
-            "SERIAL_FC",
+            "TRNG",
+            "FLASH",
+            "USBDEVICE",
+            "MPU"
+        ],
+        "release_versions": ["2", "5"],
+        "device_name": "STM32L4R5ZI",
+        "bootloader_supported": true
+    },
+    "NUCLEO_L4R5ZI_P": {
+        "inherits": ["NUCLEO_L4R5ZI"],
+        "detect_code": ["0781"]
+    },
+    "DISCO_L4R9I": {
+        "inherits": [ "FAMILY_STM32" ],
+        "supported_form_factors": [ "ARDUINO", "STMOD", "PMOD" ],
+        "core": "Cortex-M4F",
+        "extra_labels_add": [ "STM32L4", "STM32L4R9xI" ],
+        "config": {
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC (need HW patch) | USE_PLL_HSE_XTAL (need HW patch) | USE_PLL_HSI | USE_PLL_MSI",
+                "value": "USE_PLL_MSI",
+                "macro_name": "CLOCK_SOURCE"
+            },
+            "lpticker_lptim": {
+                "help": "This target supports LPTIM. Set value 1 to use LPTIM for LPTICKER, or 0 to use RTC wakeup timer",
+                "value": 1
+            }
+        },
+        "macros_add": [
+            "STM32L4R9xx",
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
+        "detect_code": ["0774"],
+        "device_has_add": [
+            "ANALOGOUT",
+            "CAN",
+            "CRC",
+            "SERIAL_ASYNCH",
             "TRNG",
             "FLASH",
             "MPU"
         ],
         "release_versions": ["2", "5"],
-        "device_name": "STM32L4R5ZI",
+        "bootloader_supported": true
+    },
+    "NUCLEO_WB55RG": {
+        "inherits": ["FAMILY_STM32"],
+        "supported_form_factors": ["ARDUINO", "MORPHO"],
+        "core": "Cortex-M4F",
+        "extra_labels_add": ["STM32WB", "STM32WB55xx", "STM32WB55xG", "STM32WB55RG", "CORDIO"],
+        "config": {
+            "clock_source": {
+                "help": "Mask value : USE_PLL_HSE_EXTC (HSE recommended for BLE usage) | USE_PLL_HSI | USE_PLL_MSI",
+                "value": "USE_PLL_HSE_EXTC",
+                "macro_name": "CLOCK_SOURCE"
+            },
+            "lpticker_lptim": {
+                "help": "This target supports LPTIM. Set value 1 to use LPTIM for LPTICKER, or 0 to use RTC wakeup timer",
+                "value": 1
+            }
+        },
+        "macros_add": [
+            "MBED_TICKLESS",
+            "EXTRA_IDLE_STACK_REQUIRED"
+        ],
+        "overrides": { "lpticker_delay_ticks": 0 },
+        "detect_code": ["0839"],
+        "device_has_add": [
+			"CRC",
+			"SERIAL_ASYNCH",
+			"SERIAL_FC",
+			"TRNG",
+			"FLASH",
+			"MPU"
+		],
+        "features": ["BLE"],
+        "release_versions": ["2", "5"],
         "bootloader_supported": true
     },
     "VBLUNO52": {
@@ -7232,10 +7996,6 @@
             "usb-device-hsusbd": {
                 "help": "Select high-speed USB device or not",
                 "value": 1
-            },
-            "ctrl01-enable": {
-                "help": "Enable control_01",
-                "value": 0
             }
         },
         "inherits": ["Target"],
@@ -7266,20 +8026,25 @@
             "FLASH",
             "CAN",
             "EMAC",
-            "MPU"
+            "MPU",
+            "WATCHDOG",
+            "RESET_REASON"
         ],
         "release_versions": ["5"],
         "bootloader_supported": true,
         "overrides": {
-            "network-default-interface-type": "ETHERNET"
+            "network-default-interface-type": "ETHERNET",
+            "tickless-from-us-ticker": true
         }
     },
     "NUMAKER_PFM_M487": {
         "inherits": ["MCU_M480"],
+        "components_add": ["FLASHIAP"],
         "device_name": "M487JIDAE"
     },
     "NUMAKER_IOT_M487": {
         "inherits": ["MCU_M480"],
+        "components_add": ["FLASHIAP"],
         "device_name": "M487JIDAE"
     },
     "TMPM066": {
@@ -7300,6 +8065,7 @@
             "PORTIN",
             "PORTINOUT",
             "PORTOUT",
+            "RESET_REASON",
             "SERIAL",
             "SLEEP",
             "I2C",
@@ -7341,13 +8107,16 @@
                 "macro_name": "CLOCK_SOURCE"
             }
         },
-        "device_has_add": ["SERIAL_ASYNCH", "SERIAL_FC", "FLASH"],
+        "device_has_add": [
+            "SERIAL_ASYNCH",
+            "FLASH"
+        ],
         "release_versions": ["2"],
         "device_name": "STM32F411RE"
     },
     "TMPM46B": {
         "inherits": ["Target"],
-        "core": "Cortex-M4",
+        "core": "Cortex-M4F",
         "is_disk_virtual": true,
         "extra_labels": ["TOSHIBA"],
         "macros": ["__TMPM46B__"],
@@ -7360,6 +8129,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "SERIAL",
             "SERIAL_FC",
             "SPI",
@@ -7377,7 +8147,6 @@
     "ARM_FM": {
         "inherits": ["Target"],
         "public": false,
-        "macros": ["__ARM_FM"],
         "extra_labels": ["ARM_FM"]
     },
     "FVP_MPS2": {
@@ -7393,18 +8162,19 @@
             "FLASH",
             "I2C",
             "INTERRUPTIN",
+            "LPTICKER",
             "PORTIN",
             "PORTINOUT",
             "PORTOUT",
             "SERIAL",
-            "SERIAL_FC",
+            "SLEEP",
             "SPI",
             "SPISLAVE",
             "TSC",
             "USTICKER"
         ],
         "release_versions": ["5"],
-        "components_add": ["LAN91C111"],
+        "components_add": ["LAN91C111", "FLASHIAP"],
         "overrides": {
             "network-default-interface-type": "ETHERNET"
         }
@@ -7417,8 +8187,7 @@
     "FVP_MPS2_M0P": {
         "inherits": ["FVP_MPS2"],
         "core": "Cortex-M0+",
-        "macros_add": ["CMSDK_CM0plus"],
-        "device_has_add": ["MPU"]
+        "macros_add": ["CMSDK_CM0plus"]
     },
     "FVP_MPS2_M3": {
         "inherits": ["FVP_MPS2"],
@@ -7428,13 +8197,13 @@
     },
     "FVP_MPS2_M4": {
         "inherits": ["FVP_MPS2"],
-        "core": "Cortex-M4",
+        "core": "Cortex-M4F",
         "macros_add": ["CMSDK_CM4"],
         "device_has_add": ["MPU"]
     },
     "FVP_MPS2_M7": {
         "inherits": ["FVP_MPS2"],
-        "core": "Cortex-M7",
+        "core": "Cortex-M7FD",
         "macros_add": ["CMSDK_CM7"],
         "device_has_add": ["MPU"]
     },
@@ -7453,6 +8222,7 @@
             "MBED_TZ_DEFAULT_ACCESS=1",
             "LPTICKER_DELAY_TICKS=3"
         ],
+        "trustzone": true,
         "is_disk_virtual": true,
         "supported_toolchains": ["ARMC6"],
         "config": {
@@ -7472,6 +8242,9 @@
                 "help": "Select GPIO IRQ debounce sample rate: GPIO_DBCTL_DBCLKSEL_1, GPIO_DBCTL_DBCLKSEL_2, GPIO_DBCTL_DBCLKSEL_4, ..., or GPIO_DBCTL_DBCLKSEL_32768",
                 "value": "GPIO_DBCTL_DBCLKSEL_16"
             }
+        },
+        "overrides": {
+            "mpu-rom-end": "0x1fffffff"
         },
         "inherits": ["Target"],
         "device_has": [
@@ -7500,10 +8273,17 @@
             "FLASH",
             "MPU"
         ],
+        "components_add": ["FLASHIAP"],
         "detect_code": ["1305"],
         "release_versions": ["5"],
         "device_name": "M2351KIAAEES",
-        "bootloader_supported": true
+        "bootloader_supported": true,
+        "tickless-from-us-ticker": true,
+        "forced_reset_timeout": 3,
+        "mbed_rom_start"    : "0x10040000",
+        "mbed_rom_size"     : "0x40000",
+        "mbed_ram_start"    : "0x30008000",
+        "mbed_ram_size"     : "0x10000"
     },
     "TMPM3H6": {
         "inherits": ["Target"],
@@ -7521,6 +8301,7 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "SERIAL",
             "SLEEP",
             "SPI",
@@ -7535,7 +8316,7 @@
     },
     "TMPM4G9": {
         "inherits": ["Target"],
-        "core": "Cortex-M4",
+        "core": "Cortex-M4F",
         "is_disk_virtual": true,
         "extra_labels": ["TOSHIBA"],
         "macros": ["__TMPM4G9__"],
@@ -7548,10 +8329,16 @@
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
             "SERIAL",
+            "SERIAL_FC",
             "SPI",
+            "SPISLAVE",
+            "SPI_ASYNCH",
             "I2C",
             "I2CSLAVE",
+            "I2C_ASYNCH",
+            "RTC",
             "STDIO_MESSAGES",
             "FLASH",
             "SLEEP",
@@ -7565,35 +8352,41 @@
     },
     "MCU_PSOC6": {
         "inherits": ["Target"],
-        "macros": ["MBED_MPU_CUSTOM"],
+        "macros": ["MBED_MPU_CUSTOM", "LPTICKER_DELAY_TICKS=3"],
         "default_toolchain": "GCC_ARM",
-        "supported_toolchains": ["GCC_ARM", "IAR", "ARM"],
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
         "core": "Cortex-M4F",
         "OUTPUT_EXT": "hex",
         "device_has": [
-            "USTICKER",
+            "ANALOGIN",
+            "ANALOGOUT",
+            "CRC",
+            "FLASH",
+            "I2C",
+            "I2C_ASYNCH",
+            "I2CSLAVE",
             "INTERRUPTIN",
-            "SERIAL",
-            "SERIAL_ASYNCH",
-            "SERIAL_FC",
+            "LPTICKER",
             "PORTIN",
             "PORTOUT",
             "PORTINOUT",
-            "RTC",
             "PWMOUT",
-            "ANALOGIN",
-            "ANALOGOUT",
-            "I2C",
-            "I2C_ASYNCH",
+            "RTC",
+            "SERIAL",
+            "SERIAL_FC",
+            "SERIAL_ASYNCH",
+            "SLEEP",
             "SPI",
             "SPI_ASYNCH",
+            "SPISLAVE",
             "STDIO_MESSAGES",
-            "LPTICKER",
-            "SLEEP",
-            "FLASH"
+            "TRNG",
+            "USBDEVICE",
+            "USTICKER"
         ],
         "release_versions": ["5"],
         "extra_labels": ["Cypress", "PSOC6"],
+        "components_add": ["SOFTFP", "RTX"],
         "public": false
     },
     "MCU_PSOC6_M0": {
@@ -7604,13 +8397,133 @@
     },
     "MCU_PSOC6_M4": {
         "inherits": ["MCU_PSOC6"],
+        "components_add": ["FLASHIAP"],
         "macros_add": ["MCU_PSOC6_M4"],
         "public": false
+    },
+    "CY8CMOD_062_4343W": {
+        "inherits": ["MCU_PSOC6_M4"],
+        "features": ["BLE"],
+        "device_has_remove": ["ANALOGOUT"],
+        "extra_labels_add": [
+            "PSOC6_02",
+            "CM0P_SLEEP",
+            "WHD",
+            "4343W",
+            "CYW43XXX",
+            "CORDIO"
+        ],
+        "macros_add": ["CY8C624ABZI_D44"],
+        "public": false,
+        "overrides": {
+            "network-default-interface-type": "WIFI"
+        }
+    },
+    "CY8CMOD_062S2_43012": {
+        "inherits": ["MCU_PSOC6_M4"],
+        "features": ["BLE"],
+        "device_has_remove": ["ANALOGOUT"],
+        "extra_labels_add": [
+            "PSOC6_02",
+            "CM0P_SLEEP",
+            "WHD",
+            "43012",
+            "CYW43XXX",
+            "CORDIO"
+        ],
+        "macros_add": ["CY8C624ABZI_D44", "CYBSP_WIFI_CAPABLE"],
+        "public": false,
+        "overrides": {
+            "network-default-interface-type": "WIFI"
+        }
+    },
+    "CY8CKIT_062_WIFI_BT": {
+        "inherits": ["MCU_PSOC6_M4"],
+        "features": ["BLE"],
+        "supported_form_factors": ["ARDUINO"],
+        "extra_labels_add": [
+            "PSOC6_01",
+            "CM0P_SLEEP",
+            "WHD",
+            "4343W",
+            "CYW43XXX",
+            "CORDIO"
+        ],
+        "macros_add": ["CY8C6247BZI_D54", "CYHAL_UDB_SDIO", "SEMAPHORE"],
+        "detect_code": ["1900"],
+        "post_binary_hook": {
+            "function": "PSOC6Code.complete"
+        },
+        "bootloader_supported": true,
+        "mbed_rom_start": "0x10002000",
+        "mbed_rom_size": "0xFE000",
+        "sectors": [[268435456, 512]],                            
+        "overrides": {
+            "network-default-interface-type": "WIFI"
+        },
+        "program_cycle_s": 10
+    },
+    "CY8CPROTO_062_4343W": {
+        "inherits": ["CY8CMOD_062_4343W"],
+        "detect_code": ["1901"],
+        "post_binary_hook": {
+            "function": "PSOC6Code.complete"
+        },
+        "bootloader_supported": true,
+        "mbed_rom_start": "0x10002000",
+        "mbed_rom_size": "0x1FE000",
+        "sectors": [[268435456, 512]]                    
+    },
+    "CY8CKIT_062S2_43012": {
+        "inherits": ["CY8CMOD_062S2_43012"],
+        "supported_form_factors": ["ARDUINO"],
+        "detect_code": ["190B"],
+        "post_binary_hook": {
+            "function": "PSOC6Code.complete"
+        }
+    },
+    "CY8CKIT_062_BLE": {
+        "inherits": ["MCU_PSOC6_M4"],
+        "device_has_remove": ["USBDEVICE"],
+        "supported_form_factors": ["ARDUINO"],
+        "extra_labels_add": [
+            "PSOC6_01",
+            "CM0P_SLEEP"
+        ],
+        "macros_add": ["CY8C6347BZI_BLD53"],
+        "detect_code": ["1902"],
+        "post_binary_hook": {
+            "function": "PSOC6Code.complete"
+        },
+        "sectors": [[268443648, 512]],
+        "bootloader_supported": true
+    },
+    "CYW943012P6EVB_01": {
+        "inherits": ["MCU_PSOC6_M4"],
+        "features": ["BLE"],
+        "extra_labels_add": [
+            "PSOC6_01",
+            "CM0P_SLEEP",
+            "WHD",
+            "43012",
+            "CYW43XXX",
+            "CORDIO"
+        ],
+        "macros_add": ["CY8C6247BZI_D54", "CYHAL_UDB_SDIO", "SEMAPHORE"],
+        "detect_code": ["1906"],
+        "post_binary_hook": {
+            "function": "PSOC6Code.complete"
+        },
+        "overrides": {
+            "network-default-interface-type": "WIFI"
+        }
     },
     "FUTURE_SEQUANA_M0": {
         "inherits": ["MCU_PSOC6_M0"],
         "supported_form_factors": ["ARDUINO"],
-        "extra_labels_add": ["CY8C63XX", "FUTURE_SEQUANA"],
+        "extra_labels_add": ["PSOC6_FUTURE", "CY8C63XX", "FUTURE_SEQUANA"],
+        "extra_labels_remove": ["PSOC6"],
+        "device_has_remove": ["TRNG", "CRC", "I2CSLAVE", "USBDEVICE"],
         "macros_add": ["CY8C6347BZI_BLD53"],
         "detect_code": ["6000"],
         "post_binary_hook": {
@@ -7636,12 +8549,13 @@
     },
     "FUTURE_SEQUANA": {
         "inherits": ["MCU_PSOC6_M4"],
-        "sub_target": "FUTURE_SEQUANA_M0",
         "supported_form_factors": ["ARDUINO"],
-        "extra_labels_add": ["CY8C63XX", "CORDIO"],
+        "extra_labels_add": ["PSOC6_FUTURE", "CY8C63XX", "CORDIO"],
+        "extra_labels_remove": ["PSOC6"],
+        "device_has_remove": ["TRNG", "CRC", "I2CSLAVE", "USBDEVICE"],
         "macros_add": ["CY8C6347BZI_BLD53"],
         "detect_code": ["6000"],
-        "m0_core_img": "psoc63_m0_default_1.01.hex",
+        "hex_filename": "psoc63_m0_default_1.03.hex",
         "post_binary_hook": {
             "function": "PSOC6Code.complete"
         },
@@ -7663,53 +8577,6 @@
             }
         }
     },
-    "FUTURE_SEQUANA_M0_PSA": {
-        "inherits": ["SPE_Target", "FUTURE_SEQUANA_M0"],
-        "components_add": ["SPM_MAILBOX", "FLASHIAP"],
-        "extra_labels_add": ["PSA"],
-        "macros_add": [
-            "PSOC6_DYNSRM_DISABLE=1",
-            "MBEDTLS_PSA_CRYPTO_SPM",
-            "MBEDTLS_PSA_CRYPTO_C",
-            "MBEDTLS_ENTROPY_NV_SEED",
-            "MBEDTLS_PLATFORM_NV_SEED_READ_MACRO=mbed_default_seed_read",
-            "MBEDTLS_PLATFORM_NV_SEED_WRITE_MACRO=mbed_default_seed_write"
-        ],
-        "deliver_to_target": "FUTURE_SEQUANA_PSA",
-        "overrides": {
-            "secure-rom-start": "0x10000000",
-            "secure-rom-size": "0x80000",
-            "non-secure-rom-start": "0x10080000",
-            "non-secure-rom-size": "0x78000",
-            "secure-ram-start": "0x08000000",
-            "secure-ram-size": "0x10000",
-            "non-secure-ram-start": "0x08010000",
-            "non-secure-ram-size": "0x37700",
-            "shared-ram-start": "0x08047700",
-            "shared-ram-size": "0x100"
-        }
-    },
-    "FUTURE_SEQUANA_PSA": {
-        "inherits": ["NSPE_Target", "FUTURE_SEQUANA"],
-        "sub_target": "FUTURE_SEQUANA_M0_PSA",
-        "extra_labels_add": ["PSA"],
-        "extra_labels_remove": ["CORDIO"],
-        "components_add": ["SPM_MAILBOX"],
-        "macros_add": ["PSOC6_DYNSRM_DISABLE=1", "MBEDTLS_PSA_CRYPTO_C"],
-        "m0_core_img": "psa_release_1.0.hex",
-        "overrides": {
-            "secure-rom-start": "0x10000000",
-            "secure-rom-size": "0x80000",
-            "non-secure-rom-start": "0x10080000",
-            "non-secure-rom-size": "0x78000",
-            "secure-ram-start": "0x08000000",
-            "secure-ram-size": "0x10000",
-            "non-secure-ram-start": "0x08010000",
-            "non-secure-ram-size": "0x37700",
-            "shared-ram-start": "0x08047700",
-            "shared-ram-size": "0x100"
-        }
-    },
     "TMPM3HQ": {
         "inherits": ["Target"],
         "core": "Cortex-M3",
@@ -7721,17 +8588,25 @@
             "USTICKER",
             "ANALOGIN",
             "ANALOGOUT",
+            "CRC",
             "INTERRUPTIN",
             "PORTIN",
             "PORTINOUT",
             "PORTOUT",
             "PWMOUT",
+            "RESET_REASON",
+            "RTC",
             "SERIAL",
+            "SERIAL_FC",
             "SLEEP",
             "SPI",
+            "SPI_ASYNCH",
+            "SPISLAVE",
             "I2C",
+            "I2C_ASYNCH",
             "I2CSLAVE",
             "STDIO_MESSAGES",
+            "FLASH",
             "MPU"
         ],
         "device_name": "TMPM3HQFDFG",
@@ -7742,14 +8617,236 @@
         "inherits": ["Target"],
         "core": "Cortex-M4F",
         "public": true,
-        "extra_labels": ["RDA", "UNO_91H", "FLASH_CMSIS_ALGO"],
+        "extra_labels": ["RDA", "UNO_91H", "FLASH_CMSIS_ALGO", "RDA_EMAC"],
         "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
-        "macros": ["TWO_RAM_REGIONS", "CMSIS_NVIC_VIRTUAL", "CMSIS_NVIC_VIRTUAL_HEADER_FILE=\"RDA5981_nvic_virtual.h\""],
-        "device_has": ["USTICKER", "PORTIN", "PORTOUT", "PORTINOUT", "INTERRUPTIN", "SERIAL", "STDIO_MESSAGES", "PWMOUT", "SPI", "SLEEP", "ANALOGIN", "FLASH", "TRNG", "MPU"],
+        "macros": ["CMSIS_NVIC_VIRTUAL", "CMSIS_NVIC_VIRTUAL_HEADER_FILE=\"RDA5981_nvic_virtual.h\""],
+        "device_has": [
+            "USTICKER",
+            "PORTIN",
+            "PORTOUT",
+            "PORTINOUT",
+            "INTERRUPTIN",
+            "EMAC",
+            "SERIAL",
+            "SERIAL_FC",
+            "STDIO_MESSAGES",
+            "PWMOUT",
+            "SPI",
+            "SLEEP",
+            "ANALOGIN",
+            "FLASH",
+            "TRNG"
+        ],
         "release_versions": ["2", "5"]
     },
     "UNO_91H": {
         "inherits": ["RDA5981X"],
-        "detect_code": ["8001"]
+        "detect_code": ["8001"],
+        "components_add": ["FLASHIAP"],
+        "bootloader_supported": true,
+        "mbed_ram_start": "0x00100080",
+        "mbed_ram_size": "0x1ff80",
+        "mbed_rom_start": "0x18001000",
+        "mbed_rom_size": "0x1F4000",
+        "sectors": [[0,4096]],
+        "overrides": {
+            "network-default-interface-type" : "WIFI"
+        }
+    },
+    "GD32_Target": {
+        "inherits": ["Target"],
+        "public": false,
+        "extra_labels": ["GigaDevice"],
+        "supported_toolchains": ["ARM", "IAR", "GCC_ARM"],
+        "device_has": [
+            "USTICKER",
+            "ANALOGIN",
+            "INTERRUPTIN",
+            "PORTIN",
+            "PORTINOUT",
+            "PORTOUT",
+            "PWMOUT",
+            "SERIAL"
+        ]
+    },
+    "GD32_F307VG": {
+        "inherits": ["GD32_Target"],
+        "supported_form_factors": ["ARDUINO"],
+        "core": "Cortex-M4F",
+        "extra_labels_add": ["GD32F30X", "GD32F307VG", "GD_EMAC"],
+        "device_has_add": [
+            "RTC",
+            "I2C",
+            "CAN",
+            "I2CSLAVE",
+            "ANALOGOUT",
+            "SPI",
+            "SPISLAVE",
+            "SERIAL_ASYNCH",
+            "SERIAL_FC",
+            "EMAC",
+            "FLASH",
+            "SLEEP",
+            "MPU"
+        ],
+        "detect_code": ["1701"],
+        "macros_add": ["GD32F30X_CL"],
+        "release_versions": ["5"],
+        "overrides": {
+            "network-default-interface-type": "ETHERNET"
+        }
+    },
+      "TT_M3HQ": {
+        "inherits": ["Target"],
+        "core": "Cortex-M3",
+        "is_disk_virtual": true,
+        "extra_labels": ["TT"],
+        "macros": ["__TT_M3HQ__"],
+        "supported_toolchains": ["GCC_ARM", "ARM", "IAR"],
+        "device_has": [
+            "ANALOGIN",
+            "USTICKER",
+            "ANALOGOUT",
+            "INTERRUPTIN",
+            "PORTIN",
+            "PORTINOUT",
+            "PORTOUT",
+            "PWMOUT",
+            "RTC",
+            "SERIAL",
+            "SERIAL_FC",
+            "SLEEP",
+            "SPI",
+            "SPISLAVE",
+            "SPI_ASYNCH",
+            "I2C",
+            "I2CSLAVE",
+            "I2C_ASYNCH",
+            "STDIO_MESSAGES",
+            "MPU"
+        ],
+        "device_name": "TMPM3HQFDFG",
+        "detect_code": ["8012"],
+        "release_versions": ["5"]
+    },
+    "GD32_F450ZI": {
+        "inherits": ["GD32_Target"],
+        "supported_form_factors": ["ARDUINO"],
+        "core": "Cortex-M4F",
+        "components_add": ["FLASHIAP"],
+        "extra_labels_add": ["GD32F4XX", "GD32F450ZI", "GD_EMAC","PSA"],
+        "device_has_add": [
+            "RTC",
+            "I2C",
+            "CAN",
+            "I2CSLAVE",
+            "ANALOGOUT",
+            "SPI",
+            "SPISLAVE",
+            "SERIAL_ASYNCH",
+            "SERIAL_FC",
+            "EMAC",
+            "FLASH",
+            "SLEEP",
+            "MPU",
+            "TRNG"
+        ],
+        "device_name": "GD32F450ZI",
+        "detect_code": ["1702"],
+        "macros_add": ["GD32F450"],
+        "bootloader_supported": true,
+        "release_versions": ["5"],
+        "overrides": {
+            "network-default-interface-type": "ETHERNET"
+        }
+    },
+    "GD32_E103VB": {
+        "inherits": ["GD32_Target"],
+        "supported_form_factors": ["ARDUINO"],
+        "core": "Cortex-M4F",
+        "extra_labels_add": ["GD32E10X", "GD32E103VB"],
+        "device_has_add": [
+            "RTC",
+            "I2C",
+            "CAN",
+            "I2CSLAVE",
+            "ANALOGOUT",
+            "SPI",
+            "SPISLAVE",
+            "SERIAL_ASYNCH",
+            "SERIAL_FC",
+            "FLASH",
+            "SLEEP"
+        ],
+        "detect_code": ["1703"],
+        "macros_add": ["GD32E10X"],
+        "release_versions": ["5"]
+	},
+    "TT_M4G9": {
+		"inherits": ["Target"],
+		"core": "Cortex-M4F",
+		"is_disk_virtual": true,
+		"extra_labels": ["TT"],
+		"macros": ["__TT_M4G9__"],
+		"supported_toolchains": ["GCC_ARM", "ARM", "IAR"],
+		"device_has": ["USTICKER",
+                   "ANALOGIN",
+                   "ANALOGOUT",
+                   "SERIAL",
+                   "I2C",
+                   "I2CSLAVE",
+                   "INTERRUPTIN",
+                   "PORTIN",
+                   "PORTINOUT",
+                   "PORTOUT",
+                   "PWMOUT",
+                   "SLEEP",
+                   "SPI",
+                   "STDIO_MESSAGES",
+                   "FLASH",
+                   "MPU"
+		],
+		"device_name": "TMPM4G9F15FG",
+		"detect_code": ["8013"],
+		"release_versions": ["5"],
+		"bootloader_supported": true
+    },
+    "EP_AGORA": {
+        "inherits": ["MCU_NRF52840"],
+        "device_name": "nRF52840_xxAA",
+        "supported_form_factors": [],
+        "config": {
+            "modem_is_on_board": {
+                "help": "Value: Tells the build system that the modem is on-board as oppose to a plug-in shield/module.",
+                "value": 0,
+                "macro_name": "MODEM_ON_BOARD"
+            },
+            "modem_data_connection_type": {
+                "help": "Value: Defines how an on-board modem is wired up to the MCU, e.g., data connection can be a UART or USB and so forth.",
+                "value": 0,
+                "macro_name": "MODEM_ON_BOARD_UART"
+            }
+        },
+        "components_add": ["SPIF"],
+        "components_remove": ["QSPIF"],
+        "release_versions": ["5"]
+    },
+    "IM880B": {
+        "inherits": ["FAMILY_STM32"],
+        "core": "Cortex-M3",
+        "default_toolchain": "ARM",
+        "extra_labels_add": ["STM32L1", "STM32L151xBA", "STM32L151CBA"],
+        "supported_toolchains": ["ARM", "GCC_ARM", "IAR"],
+        "device_has_add": ["ANALOGOUT", "MPU"],
+        "device_has_remove": [
+            "SERIAL_FC"
+        ],
+        "macros_add": ["HSE_VALUE=16000000"],
+        "release_versions": ["5"],
+        "device_name": "STM32L151CBxxA"
+    },
+    "__build_tools_metadata__": {
+        "version": "1",
+        "public": false
     }
 }

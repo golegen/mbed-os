@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Arm Limited and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,13 +35,20 @@ typedef struct {
     dhcp_client_global_adress_cb *global_address_cb;
     uint16_t service_instance;
     uint16_t relay_instance;
+    uint16_t sol_timeout;
+    uint16_t sol_max_rt;
+    uint8_t sol_max_rc;
     uint8_t libDhcp_instance;
     int8_t interface;
+    bool renew_uses_solicit: 1;
+    bool one_instance_interface: 1;
+    bool no_address_hint: 1;
 } dhcp_client_class_t;
 
 static dhcp_client_class_t dhcp_client;
 
-void dhcpv6_client_set_address(int8_t interface_id, dhcpv6_client_server_data_t *srv_data_ptr);
+static bool dhcpv6_client_set_address(int8_t interface_id, dhcpv6_client_server_data_t *srv_data_ptr);
+void dhcpv6_renew(protocol_interface_info_entry_t *interface, if_address_entry_t *addr, if_address_callback_t reason);
 
 
 void dhcp_client_init(int8_t interface)
@@ -50,6 +57,31 @@ void dhcp_client_init(int8_t interface)
     dhcp_client.service_instance = dhcp_service_init(interface, DHCP_INSTANCE_CLIENT, NULL);
     dhcp_client.interface = interface;
     dhcp_client.libDhcp_instance = libdhcpv6_nonTemporal_entry_get_unique_instance_id();
+    dhcp_client.sol_timeout = 0;
+    dhcp_client.sol_max_rt = 0;
+    dhcp_client.sol_max_rc = 0;
+    dhcp_client.renew_uses_solicit = false;
+    dhcp_client.one_instance_interface = false;
+    dhcp_client.no_address_hint = false;
+
+    return;
+}
+void dhcp_client_configure(int8_t interface, bool renew_uses_solicit, bool one_client_for_this_interface, bool no_address_hint)
+{
+    // Set true if RENEW is not used and SOLICIT sent instead.
+    (void)interface;
+    dhcp_client.renew_uses_solicit = renew_uses_solicit;
+    dhcp_client.one_instance_interface = one_client_for_this_interface;
+    dhcp_client.no_address_hint = no_address_hint;
+}
+
+void dhcp_client_solicit_timeout_set(int8_t interface, uint16_t timeout, uint16_t max_rt, uint8_t max_rc)
+{
+    // Set the default retry values for SOLICIT and RENEW messages.
+    (void)interface;
+    dhcp_client.sol_timeout = timeout;
+    dhcp_client.sol_max_rt = max_rt;
+    dhcp_client.sol_max_rc = max_rc;
 
     return;
 }
@@ -146,6 +178,14 @@ int dhcp_solicit_resp_cb(uint16_t instance_id, void *ptr, uint8_t msg_name,  uin
         goto error_exit;
     }
 
+    if (dhcp_client.one_instance_interface && memcmp(srv_data_ptr->iaNontemporalAddress.addressPrefix, dhcp_ia_non_temporal_params.nonTemporalAddress, 16)) {
+
+        protocol_interface_info_entry_t *cur = protocol_stack_interface_info_get_by_id(dhcp_client.interface);
+        if (cur) {
+            addr_deprecate(cur, srv_data_ptr->iaNontemporalAddress.addressPrefix);
+        }
+    }
+
     memcpy(srv_data_ptr->iaNontemporalAddress.addressPrefix, dhcp_ia_non_temporal_params.nonTemporalAddress, 16);
     srv_data_ptr->iaNontemporalAddress.preferredTime = dhcp_ia_non_temporal_params.preferredValidLifeTime;
     srv_data_ptr->iaNontemporalAddress.validLifetime = dhcp_ia_non_temporal_params.validLifeTime;
@@ -153,13 +193,13 @@ int dhcp_solicit_resp_cb(uint16_t instance_id, void *ptr, uint8_t msg_name,  uin
     srv_data_ptr->serverLinkType = serverId.linkType;
     srv_data_ptr->T0 = dhcp_ia_non_temporal_params.T0;
     srv_data_ptr->T1  = dhcp_ia_non_temporal_params.T1;
-    srv_data_ptr->iaNonTemporalStructValid = true;
 
-    dhcpv6_client_set_address(dhcp_client.interface, srv_data_ptr);
+
+    bool status = dhcpv6_client_set_address(dhcp_client.interface, srv_data_ptr);
 
 
     if (dhcp_client.global_address_cb) {
-        dhcp_client.global_address_cb(dhcp_client.interface, srv_data_ptr->server_address, srv_data_ptr->iaNontemporalAddress.addressPrefix, true);
+        dhcp_client.global_address_cb(dhcp_client.interface, srv_data_ptr->server_address, srv_data_ptr->iaNontemporalAddress.addressPrefix, status);
     }
     return RET_MSG_ACCEPTED;
 error_exit:
@@ -167,26 +207,60 @@ error_exit:
     return RET_MSG_ACCEPTED;
 }
 
-int dhcp_client_get_global_address(int8_t interface, uint8_t dhcp_addr[static 16], uint8_t prefix[static 16], uint8_t mac64[static 8], dhcp_client_global_adress_cb *error_cb)
+int dhcp_client_get_global_address(int8_t interface, uint8_t dhcp_addr[static 16], uint8_t prefix[static 16], uint8_t mac64[static 8], uint16_t link_type, dhcp_client_global_adress_cb *error_cb)
 {
     dhcpv6_solication_base_packet_s solPacket = {0};
-    dhcpv6_ia_non_temporal_address_s nonTemporalAddress = {0};
+
     uint8_t *payload_ptr;
     uint32_t payload_len;
     dhcpv6_client_server_data_t *srv_data_ptr;
+    bool add_prefix;
 
-    if (mac64 == NULL || prefix == NULL || dhcp_addr == NULL) {
+    if (mac64 == NULL || dhcp_addr == NULL) {
         tr_error("Invalid parameters");
         return -1;
     }
 
-    srv_data_ptr = libdhcvp6_nontemporalAddress_server_data_allocate(interface, dhcp_client.libDhcp_instance, mac64, DHCPV6_DUID_HARDWARE_EUI64_TYPE, prefix, dhcp_addr);
+    if (!prefix || dhcp_client.one_instance_interface) {
+        //NULL Definition will only check That Interface is not generated
+        srv_data_ptr = libdhcpv6_nonTemporal_entry_get_by_instance(dhcp_client.libDhcp_instance);
+        if (srv_data_ptr) {
+            //Already Created to same interface
+            if (dhcp_client.one_instance_interface && prefix) {
+                if (srv_data_ptr->iaNonTemporalStructValid) {
+                    if (memcmp(srv_data_ptr->iaNontemporalAddress.addressPrefix, prefix, 8)) {
+                        //Request new address direct from Server if prefix is new
+                        srv_data_ptr->iaNonTemporalStructValid = false;
+                        dhcpv6_renew(protocol_stack_interface_info_get_by_id(interface), NULL, ADDR_CALLBACK_TIMER);
+                    }
+                    return 0;
+                }
+            }
+            return -1;
+        }
+    } else if (dhcp_client_server_address_update(interface, prefix, dhcp_addr) == 0) {
+        //No need for allocate new
+        return 0;
+    }
+
+    tr_debug("GEN new Dhcpv6 client %u", dhcp_client.libDhcp_instance);
+    srv_data_ptr = libdhcvp6_nontemporalAddress_server_data_allocate(interface, dhcp_client.libDhcp_instance, mac64, link_type, prefix, dhcp_addr);
+
     if (!srv_data_ptr) {
         tr_error("OOM srv_data_ptr");
         return -1;
     }
 
-    payload_len = libdhcpv6_solication_message_length(DHCPV6_DUID_HARDWARE_EUI64_TYPE, true, 0);
+
+    if (!prefix || dhcp_client.no_address_hint) {
+        add_prefix = false;
+    } else {
+        add_prefix = prefix != NULL;
+    }
+
+    payload_len = libdhcpv6_solication_message_length(link_type, add_prefix, 0);
+
+
     payload_ptr = ns_dyn_mem_temporary_alloc(payload_len);
     if (!payload_ptr) {
         libdhcvp6_nontemporalAddress_server_data_free(srv_data_ptr);
@@ -198,13 +272,19 @@ int dhcp_client_get_global_address(int8_t interface, uint8_t dhcp_addr[static 16
     srv_data_ptr->GlobalAddress = true;
     // Build solicit
     solPacket.clientDUID.linkID = mac64;
-    solPacket.clientDUID.linkType = DHCPV6_DUID_HARDWARE_EUI64_TYPE;
+    solPacket.clientDUID.linkType = link_type;
     solPacket.iaID = srv_data_ptr->IAID;
     solPacket.messageType = DHCPV6_SOLICATION_TYPE;
     solPacket.transActionId = libdhcpv6_txid_get();
     /*Non Temporal Address */
-    nonTemporalAddress.requestedAddress = prefix;
-    libdhcpv6_generic_nontemporal_address_message_write(payload_ptr, &solPacket, &nonTemporalAddress, NULL);
+
+    if (prefix && !dhcp_client.no_address_hint) {
+        dhcpv6_ia_non_temporal_address_s nonTemporalAddress = {0};
+        nonTemporalAddress.requestedAddress = prefix;
+        libdhcpv6_generic_nontemporal_address_message_write(payload_ptr, &solPacket, &nonTemporalAddress, NULL);
+    } else {
+        libdhcpv6_generic_nontemporal_address_message_write(payload_ptr, &solPacket, NULL, NULL);
+    }
 
     // send solicit
     srv_data_ptr->transActionId = dhcp_service_send_req(dhcp_client.service_instance, 0, srv_data_ptr, dhcp_addr, payload_ptr, payload_len, dhcp_solicit_resp_cb);
@@ -213,9 +293,45 @@ int dhcp_client_get_global_address(int8_t interface, uint8_t dhcp_addr[static 16
         libdhcvp6_nontemporalAddress_server_data_free(srv_data_ptr);
         return -1;
     }
+    srv_data_ptr->iaNonTemporalStructValid = false;
+    if (dhcp_client.sol_timeout != 0) {
+        // Default retry values are modified from specification update to message
+        dhcp_service_set_retry_timers(srv_data_ptr->transActionId, dhcp_client.sol_timeout, dhcp_client.sol_max_rt, dhcp_client.sol_max_rc);
+    }
 
     return 0;
 }
+
+int dhcp_client_server_address_update(int8_t interface, uint8_t prefix[static 16], uint8_t server_address[static 16])
+{
+    dhcpv6_client_server_data_t *srv_data_ptr = NULL;
+
+    if (dhcp_client.interface != interface) {
+        tr_debug("Interface not match");
+        return -1;
+    }
+
+    if (prefix) {
+        srv_data_ptr = libdhcpv6_nonTemporal_entry_get_by_prefix(interface, prefix);
+    } else if (dhcp_client.one_instance_interface) {
+        srv_data_ptr = libdhcpv6_nonTemporal_entry_get_by_instance(dhcp_client.libDhcp_instance);
+    }
+    if (!srv_data_ptr) {
+        return -1;
+    }
+
+    if (memcmp(srv_data_ptr->server_address, server_address, 16) == 0) {
+        return 0;
+    }
+
+    memcpy(srv_data_ptr->server_address, server_address, 16);
+    if (!srv_data_ptr->iaNonTemporalStructValid) {
+        dhcp_service_update_server_address(srv_data_ptr->transActionId, server_address);
+    }
+    return 0;
+}
+
+
 
 void dhcp_client_global_address_renew(int8_t interface)
 {
@@ -223,7 +339,7 @@ void dhcp_client_global_address_renew(int8_t interface)
     return;
 }
 
-void dhcp_client_global_address_delete(int8_t interface, uint8_t dhcp_addr[static 16], uint8_t prefix[static 16])
+void dhcp_client_global_address_delete(int8_t interface, uint8_t *dhcp_addr, uint8_t prefix[static 16])
 {
     protocol_interface_info_entry_t *cur;
     dhcpv6_client_server_data_t *srv_data_ptr;
@@ -232,33 +348,35 @@ void dhcp_client_global_address_delete(int8_t interface, uint8_t dhcp_addr[stati
     srv_data_ptr = libdhcpv6_nonTemporal_entry_get_by_prefix(interface, prefix);
     cur = protocol_stack_interface_info_get_by_id(interface);
 
-    do {
-        if (cur == NULL || srv_data_ptr == NULL) {
-            return;
-        }
-        dhcp_service_req_remove(srv_data_ptr->transActionId);// remove all pending retransmissions
-        tr_debug("Deleting address: %s", trace_ipv6(srv_data_ptr->iaNontemporalAddress.addressPrefix));
+    if (cur == NULL || srv_data_ptr == NULL) {
+        return;
+    }
 
+    dhcp_service_req_remove(srv_data_ptr->transActionId);// remove all pending retransmissions
+    if (dhcp_client.one_instance_interface) {
+        addr_deprecate(cur, srv_data_ptr->iaNontemporalAddress.addressPrefix);
+    } else {
         addr_delete(cur, srv_data_ptr->iaNontemporalAddress.addressPrefix);
+    }
 
-        libdhcvp6_nontemporalAddress_server_data_free(srv_data_ptr);
-        srv_data_ptr = libdhcpv6_nonTemporal_entry_get_by_prefix(interface, prefix);
-    } while (srv_data_ptr);
-
-    return;
+    libdhcvp6_nontemporalAddress_server_data_free(srv_data_ptr);
 }
 
 void dhcpv6_renew(protocol_interface_info_entry_t *interface, if_address_entry_t *addr, if_address_callback_t reason)
 {
-    dhcpv6_ia_non_temporal_address_s nonTemporalAddress = {0};
+
     dhcp_link_options_params_t serverLink;
     uint8_t *payload_ptr;
     uint32_t payload_len;
-    dhcpv6_client_server_data_t *srv_data_ptr = libdhcpv6_nonTemporal_entry_get_by_prefix(interface->id, addr->address);
+    dhcpv6_client_server_data_t *srv_data_ptr;
+    if (addr) {
+        srv_data_ptr = libdhcpv6_nonTemporal_entry_get_by_prefix(interface->id, addr->address);
+    } else {
+        srv_data_ptr = libdhcpv6_nonTemporal_entry_get_by_instance(dhcp_client.libDhcp_instance);
+    }
 
     if (srv_data_ptr == NULL) {
-        tr_warn("Dhcp address lost");
-        return ;
+        return;
     }
     if (reason == ADDR_CALLBACK_INVALIDATED) {
         dhcp_service_req_remove(srv_data_ptr->transActionId);//stop retransmissions of renew
@@ -271,10 +389,12 @@ void dhcpv6_renew(protocol_interface_info_entry_t *interface, if_address_entry_t
         return;
     }
 
-    payload_len = libdhcpv6_address_request_message_len(srv_data_ptr->clientLinkIdType, srv_data_ptr->serverLinkType, 0);
+    payload_len = libdhcpv6_address_request_message_len(srv_data_ptr->clientLinkIdType, srv_data_ptr->serverLinkType, 0, !dhcp_client.no_address_hint);
     payload_ptr = ns_dyn_mem_temporary_alloc(payload_len);
     if (payload_ptr == NULL) {
-        addr->state_timer = 200; //Retry after 20 seconds
+        if (addr) {
+            addr->state_timer = 200; //Retry after 20 seconds
+        }
         tr_error("Out of memory");
         return ;
     }
@@ -289,23 +409,46 @@ void dhcpv6_renew(protocol_interface_info_entry_t *interface, if_address_entry_t
         .requestedOptionList = NULL,
     };
 
-    // Set Address information
-    nonTemporalAddress.requestedAddress = srv_data_ptr->iaNontemporalAddress.addressPrefix;
-    nonTemporalAddress.preferredLifeTime = srv_data_ptr->iaNontemporalAddress.preferredTime;
-    nonTemporalAddress.validLifeTime = srv_data_ptr->iaNontemporalAddress.validLifetime;
+    if (dhcp_client.renew_uses_solicit) {
+        packetReq.messageType = DHCPV6_SOLICATION_TYPE;
+    }
+
+
     serverLink.linkID = srv_data_ptr->serverLinkId;
     serverLink.linkType = srv_data_ptr->serverLinkType;
-    libdhcpv6_generic_nontemporal_address_message_write(payload_ptr, &packetReq, &nonTemporalAddress, &serverLink);
+    if (dhcp_client.no_address_hint && dhcp_client.renew_uses_solicit) {
+        packetReq.timerT0 = 0;
+        packetReq.timerT1 = 0;
+        libdhcpv6_generic_nontemporal_address_message_write(payload_ptr, &packetReq, NULL, &serverLink);
+    } else {
+        // Set Address information
+        dhcpv6_ia_non_temporal_address_s nonTemporalAddress = {0};
+        nonTemporalAddress.requestedAddress = srv_data_ptr->iaNontemporalAddress.addressPrefix;
+        nonTemporalAddress.preferredLifeTime = srv_data_ptr->iaNontemporalAddress.preferredTime;
+        nonTemporalAddress.validLifeTime = srv_data_ptr->iaNontemporalAddress.validLifetime;
+        libdhcpv6_generic_nontemporal_address_message_write(payload_ptr, &packetReq, &nonTemporalAddress, &serverLink);
+    }
     // send solicit
-    srv_data_ptr->transActionId = dhcp_service_send_req(dhcp_client.service_instance, 0, srv_data_ptr, srv_data_ptr->server_address, payload_ptr, payload_len, dhcp_solicit_resp_cb);
+    uint8_t *server_address = dhcp_service_relay_global_addres_get(dhcp_client.relay_instance);
+    if (!server_address) {
+        server_address = srv_data_ptr->server_address;
+    }
+
+    srv_data_ptr->transActionId = dhcp_service_send_req(dhcp_client.service_instance, 0, srv_data_ptr, server_address, payload_ptr, payload_len, dhcp_solicit_resp_cb);
     if (srv_data_ptr->transActionId == 0) {
         ns_dyn_mem_free(payload_ptr);
-        addr->state_timer = 200; //Retry after 20 seconds
+        if (addr) {
+            addr->state_timer = 200; //Retry after 20 seconds
+        }
         tr_error("DHCP renew send failed");
+    }
+    if (packetReq.messageType == DHCPV6_SOLICATION_TYPE && dhcp_client.sol_timeout != 0) {
+        // Default retry values are modified from specification update to message
+        dhcp_service_set_retry_timers(srv_data_ptr->transActionId, dhcp_client.sol_timeout, dhcp_client.sol_max_rt, dhcp_client.sol_max_rc);
     }
 }
 
-void dhcpv6_client_set_address(int8_t interface_id, dhcpv6_client_server_data_t *srv_data_ptr)
+static bool dhcpv6_client_set_address(int8_t interface_id, dhcpv6_client_server_data_t *srv_data_ptr)
 {
     protocol_interface_info_entry_t *cur = NULL;
     if_address_entry_t *address_entry = NULL;
@@ -313,10 +456,11 @@ void dhcpv6_client_set_address(int8_t interface_id, dhcpv6_client_server_data_t 
 
     cur = protocol_stack_interface_info_get_by_id(interface_id);
     if (!cur) {
-        return;
+        return false;
     }
     renewTimer = libdhcpv6_renew_time_define(srv_data_ptr);
 
+    srv_data_ptr->iaNonTemporalStructValid = true;
     address_entry = addr_get_entry(cur, srv_data_ptr->iaNontemporalAddress.addressPrefix);
     if (address_entry == NULL) {
         // create new
@@ -328,8 +472,10 @@ void dhcpv6_client_set_address(int8_t interface_id, dhcpv6_client_server_data_t 
 
     if (address_entry == NULL) {
         tr_error("Address add failed");
-        return;
+        srv_data_ptr->iaNonTemporalStructValid = false;
+        return false;
     }
+
     if (renewTimer) {
         // translate seconds to 100ms ticks
         if (renewTimer  <  0xffffffff / 10) {
@@ -340,6 +486,7 @@ void dhcpv6_client_set_address(int8_t interface_id, dhcpv6_client_server_data_t 
     }
     address_entry->state_timer = renewTimer;
     address_entry->cb = dhcpv6_renew;
+    return true;
 }
 
 #endif

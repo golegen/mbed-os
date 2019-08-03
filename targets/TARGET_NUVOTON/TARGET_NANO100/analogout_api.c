@@ -110,7 +110,7 @@ void analogout_free(dac_t *obj)
     /* Channel-level windup from here */
 
     /* Mark channel free */
-    dac_modinit_mask[modidx] &= ~(1 << modidx);
+    dac_modinit_mask[modidx] &= ~(1 << chn);
     
     /* Close channel */
     DAC_Close(dac_base, chn);
@@ -168,6 +168,11 @@ uint16_t analogout_read_u16(dac_t *obj)
     uint16_t dat16 = (dat12 << 4) | (dat12 >> 8);
 
     return dat16;
+}
+
+const PinMap *analogout_pinmap()
+{
+    return PinMap_DAC;
 }
 
 #endif

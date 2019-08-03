@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018, Arm Limited and affiliates.
+ * Copyright (c) 2014-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +33,7 @@
 #include "NWK_INTERFACE/Include/protocol_abstract.h"
 
 // Users of protocol.h can assume it includes these headers
-#include "Core/include/address.h"
+#include "Core/include/ns_address_internal.h"
 #include "Core/include/ns_buffer.h"
 
 // Headers below this are implementation details - users of protocol.h shouldn't rely on them
@@ -121,6 +121,7 @@ typedef enum icmp_state {
     ER_BOOTSTRAP_SCAN_FAIL,
     ER_BOOTSTRAP_LEADER_UP,
     ER_BOOTSTRAP_NEW_FRAGMENT_START,
+    ER_WAIT_RESTART,
     ER_RPL_LOCAL_REPAIR,
 } icmp_state_t;
 
@@ -514,4 +515,5 @@ extern void protocol_core_dhcpv6_allocated_address_remove(protocol_interface_inf
 extern void nwk_bootsrap_state_update(arm_nwk_interface_status_type_e posted_event, protocol_interface_info_entry_t *cur);
 void bootsrap_next_state_kick(icmp_state_t new_state, protocol_interface_info_entry_t *cur);
 int8_t protocol_interface_address_compare(const uint8_t *addr);
+bool protocol_interface_any_address_match(const uint8_t *prefix, uint8_t prefix_len);
 #endif /* _NS_PROTOCOL_H */

@@ -23,7 +23,7 @@
 #include "platform/SingletonPtr.h"
 #include "platform/PlatformMutex.h"
 
-/* This is invalid warning from the compiler for below section of code
+/* This is an invalid warning from the compiler for the below section of code
 if ((width < 8) && (NULL == _crc_table)) {
     p_crc = (uint32_t)(p_crc << (8 - width));
 }
@@ -43,11 +43,21 @@ namespace mbed {
 /** \addtogroup drivers */
 /** @{*/
 
-/** CRC object provides CRC generation through hardware/software
+extern SingletonPtr<PlatformMutex> mbed_crc_mutex;
+
+/** CRC object provides CRC generation through hardware or software
  *
- *  ROM polynomial tables for supported polynomials (:: crc_polynomial_t) will be used for
- *  software CRC computation, if ROM tables are not available then CRC is computed runtime
- *  bit by bit for all data input.
+ *  CRC sums can be generated using three different methods: hardware, software ROM tables
+ *  and bitwise computation. The mode used is selected automatically based on required
+ *  polynomial and hardware capabilities. Any polynomial in standard form (`x^3 + x + 1`)
+ *  can be used for computation, but custom ones can affect the performance.
+ *
+ *  First choice is the hardware mode. The supported polynomials are hardware specific, and
+ *  you need to consult your MCU manual to discover them. Next, ROM polynomial tables
+ *  are tried (you can find list of supported polynomials here ::crc_polynomial). If the selected
+ *  configuration is supported, it will accelerate the software computations. If ROM tables
+ *  are not available for the selected polynomial, then CRC is computed at run time bit by bit
+ *  for all data input.
  *  @note Synchronization level: Thread safe
  *
  *  @tparam  polynomial CRC polynomial value in hex
@@ -93,15 +103,12 @@ namespace mbed {
  * @endcode
  * @ingroup drivers
  */
-
-extern SingletonPtr<PlatformMutex> mbed_crc_mutex;
-
 template <uint32_t polynomial = POLY_32BIT_ANSI, uint8_t width = 32>
 class MbedCRC {
 
 public:
     enum CrcMode {
-#ifdef DEVICE_CRC
+#if DEVICE_CRC
         HARDWARE = 0,
 #endif
         TABLE = 1,
@@ -146,7 +153,7 @@ public:
      *  @param  crc  CRC is the output value
      *  @return  0 on success, negative error code on failure
      */
-    int32_t compute(void *buffer, crc_data_size_t size, uint32_t *crc)
+    int32_t compute(const void *buffer, crc_data_size_t size, uint32_t *crc)
     {
         MBED_ASSERT(crc != NULL);
         int32_t status = 0;
@@ -193,14 +200,14 @@ public:
      *  @note: CRC as output in compute_partial is not final CRC value, call `compute_partial_stop`
      *         to get final correct CRC value.
      */
-    int32_t compute_partial(void *buffer, crc_data_size_t size, uint32_t *crc)
+    int32_t compute_partial(const void *buffer, crc_data_size_t size, uint32_t *crc)
     {
         int32_t status = 0;
 
         switch (_mode) {
-#ifdef DEVICE_CRC
+#if DEVICE_CRC
             case HARDWARE:
-                hal_crc_compute_partial((uint8_t *)buffer, size);
+                hal_crc_compute_partial(static_cast<const uint8_t *>(buffer), size);
                 *crc = 0;
                 break;
 #endif
@@ -232,7 +239,7 @@ public:
     {
         MBED_ASSERT(crc != NULL);
 
-#ifdef DEVICE_CRC
+#if DEVICE_CRC
         if (_mode == HARDWARE) {
             lock();
             crc_mbed_config_t config;
@@ -264,7 +271,7 @@ public:
     {
         MBED_ASSERT(crc != NULL);
 
-#ifdef DEVICE_CRC
+#if DEVICE_CRC
         if (_mode == HARDWARE) {
             *crc = hal_crc_get_result();
             unlock();
@@ -316,7 +323,7 @@ private:
      */
     void lock()
     {
-#ifdef DEVICE_CRC
+#if DEVICE_CRC
         if (_mode == HARDWARE) {
             mbed_crc_mutex->lock();
         }
@@ -327,7 +334,7 @@ private:
      */
     virtual void unlock()
     {
-#ifdef DEVICE_CRC
+#if DEVICE_CRC
         if (_mode == HARDWARE) {
             mbed_crc_mutex->unlock();
         }
@@ -497,13 +504,13 @@ private:
     }
 
     /** Constructor init called from all specialized cases of constructor.
-     *  Note: All construtor common code should be in this function.
+     *  Note: All constructor common code should be in this function.
      */
     void mbed_crc_ctor(void)
     {
         MBED_STATIC_ASSERT(width <= 32, "Max 32-bit CRC supported");
 
-#ifdef DEVICE_CRC
+#if DEVICE_CRC
         if (POLY_32BIT_REV_ANSI == polynomial) {
             _crc_table = (uint32_t *)Table_CRC_32bit_Rev_ANSI;
             _mode = TABLE;

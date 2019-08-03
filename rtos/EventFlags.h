@@ -23,9 +23,9 @@
 #define EVENT_FLAG_H
 
 #include <stdint.h>
-#include "cmsis_os2.h"
-#include "mbed_rtos1_types.h"
-#include "mbed_rtos_storage.h"
+#include "rtos/mbed_rtos_types.h"
+#include "rtos/mbed_rtos1_types.h"
+#include "rtos/mbed_rtos_storage.h"
 
 #include "platform/NonCopyable.h"
 
@@ -87,23 +87,23 @@ public:
 
     /** Wait for all of the specified event flags to become signaled.
       @param   flags    the flags to wait for (default: 0 -- no flags).
-      @param   timeout  timeout value or 0 in case of no time-out (default: osWaitForever).
+      @param   millisec timeout value (default: osWaitForever).
       @param   clear    clear specified event flags after waiting for them (default: true).
       @return  event flags before clearing or error code if highest bit set (see @a osFlagsError for details).
 
-      @note You may call this function from ISR context if the timeout parameter is set to 0.
+      @note You may call this function from ISR context if the millisec parameter is set to 0.
      */
-    uint32_t wait_all(uint32_t flags = 0, uint32_t timeout = osWaitForever, bool clear = true);
+    uint32_t wait_all(uint32_t flags = 0, uint32_t millisec = osWaitForever, bool clear = true);
 
     /** Wait for any of the specified event flags to become signaled.
       @param   flags    the flags to wait for (default: 0 -- no flags).
-      @param   timeout  timeout value or 0 in case of no timeout (default: osWaitForever).
+      @param   millisec timeout value (default: osWaitForever).
       @param   clear    clear specified event flags after waiting for them (default: true).
       @return  event flags before clearing or error code if highest bit set (see @a osFlagsError for details).
 
-      @note This function may be called from ISR context if the timeout parameter is set to 0.
+      @note This function may be called from ISR context if the millisec parameter is set to 0.
      */
-    uint32_t wait_any(uint32_t flags = 0, uint32_t timeout = osWaitForever, bool clear = true);
+    uint32_t wait_any(uint32_t flags = 0, uint32_t millisec = osWaitForever, bool clear = true);
 
     /** EventFlags destructor.
 
@@ -112,10 +112,14 @@ public:
     ~EventFlags();
 
 private:
-    void constructor(const char *name = NULL);
-    uint32_t wait(uint32_t flags, uint32_t opt, uint32_t timeout, bool clear);
+    void constructor(const char *name = nullptr);
+    uint32_t wait(uint32_t flags, uint32_t opt, uint32_t millisec, bool clear);
+#if MBED_CONF_RTOS_PRESENT
     osEventFlagsId_t                _id;
     mbed_rtos_storage_event_flags_t _obj_mem;
+#else
+    uint32_t _flags;
+#endif
 };
 
 /** @}*/

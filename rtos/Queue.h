@@ -22,11 +22,13 @@
 #ifndef QUEUE_H
 #define QUEUE_H
 
-#include "cmsis_os2.h"
-#include "mbed_rtos1_types.h"
-#include "mbed_rtos_storage.h"
+#include "rtos/mbed_rtos_types.h"
+#include "rtos/mbed_rtos1_types.h"
+#include "rtos/mbed_rtos_storage.h"
 #include "platform/mbed_error.h"
 #include "platform/NonCopyable.h"
+
+#if MBED_CONF_RTOS_PRESENT || defined(DOXYGEN_ONLY)
 
 namespace rtos {
 /** \addtogroup rtos */
@@ -65,7 +67,6 @@ public:
     */
     Queue()
     {
-        memset(&_obj_mem, 0, sizeof(_obj_mem));
         osMessageQueueAttr_t attr = { 0 };
         attr.mq_mem = _queue_mem;
         attr.mq_size = sizeof(_queue_mem);
@@ -167,7 +168,7 @@ public:
      * share the same priority level, they are retrieved in first-in, first-out
      * (FIFO) order.
      *
-     * @param   millisec  Timeout value or 0 in case of no time-out.
+     * @param   millisec  Timeout value.
      *                    (default: osWaitForever).
      *
      * @return Event information that includes the message in event. Message
@@ -186,8 +187,8 @@ public:
     osEvent get(uint32_t millisec = osWaitForever)
     {
         osEvent event;
-        T *data = NULL;
-        osStatus_t res = osMessageQueueGet(_id, &data, NULL, millisec);
+        T *data = nullptr;
+        osStatus_t res = osMessageQueueGet(_id, &data, nullptr, millisec);
 
         switch (res) {
             case osOK:
@@ -219,5 +220,7 @@ private:
 /** @}*/
 
 } // namespace rtos
+
+#endif
 
 #endif // QUEUE_H

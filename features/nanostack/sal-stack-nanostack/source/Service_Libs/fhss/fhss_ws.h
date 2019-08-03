@@ -25,6 +25,10 @@
 #define WS_MAX_TXRX_SLOT_LEN_MS         100
 // Default minimum broadcast synchronization interval in seconds
 #define DEFAULT_MIN_SYNCH_INTERVAL      60
+// Drift compensation allowed if at least SYNCH_COMPENSATION_MIN_INTERVAL (seconds) since last synchronization
+#define SYNCH_COMPENSATION_MIN_INTERVAL 60
+// MAX compensation per received synchronization info in ns
+#define MAX_DRIFT_COMPENSATION_STEP     10
 typedef struct fhss_ws fhss_ws_t;
 
 struct fhss_ws {
@@ -34,6 +38,8 @@ struct fhss_ws {
     uint16_t min_synch_interval;
     uint32_t txrx_slot_length_ms;
     uint32_t synchronization_time;
+    uint32_t unicast_start_time_us;
+    int32_t drift_per_millisecond_ns;
     int16_t *tr51_channel_table;
     uint8_t *tr51_output_table;
     bool unicast_timer_running;

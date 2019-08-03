@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, Arm Limited and affiliates.
+ * Copyright (c) 2015-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -345,8 +345,9 @@ void rpl_instance_publish_dao_target(rpl_instance_t *instance, const uint8_t *pr
 {
     rpl_dao_target_t *target = rpl_instance_lookup_published_dao_target(instance, prefix, prefix_len);
     if (target) {
+        int diff = target->lifetime > valid_lifetime ? target->lifetime - valid_lifetime : valid_lifetime - target->lifetime;
         target->lifetime = valid_lifetime;
-        if (!own) {
+        if (!own && diff > 60) {
             /* For non-owned targets, publish triggers a refresh */
             rpl_downward_target_refresh(target);
             rpl_instance_dao_trigger(instance, 0);
@@ -590,7 +591,7 @@ void rpl_instance_send_address_registration(protocol_interface_info_entry_t *int
 
     aro.status = ARO_SUCCESS;
     aro.present = true;
-    aro.lifetime = addr->valid_lifetime;
+    aro.lifetime = (addr->valid_lifetime / 60) + 1;
     memcpy(aro.eui64, interface->mac, 8);
 
     // go through neighbour list, and send to all assigned parents.
@@ -625,6 +626,7 @@ bool rpl_instance_address_registration_done(protocol_interface_info_entry_t *int
             addr->state_timer = (addr->preferred_lifetime * randLIB_get_random_in_range(75, 85) / 10);
         } else {
             tr_error("Address registration failed");
+            rpl_delete_neighbour(instance, neighbour);
         }
 
         /* If that was last one to reply, send next one. */

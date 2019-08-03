@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2017, Arm Limited and affiliates.
+ * Copyright (c) 2013-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,14 +18,14 @@
 #include "ns_types.h"
 #ifdef PANA
 #include "string.h"
-#include "Core/include/address.h"
+#include "Core/include/ns_address_internal.h"
 #include "Core/include/ns_buffer.h"
 #ifdef ECC
 #include "libX509_V3.h"
 #include "ecc.h"
 #endif
 #include "randLIB.h"
-#include "Core/include/socket.h"
+#include "Core/include/ns_socket.h"
 //#include "6LoWPAN/Bootstraps/network_lib.h"
 #include "shalib.h"
 #include "Security/TLS/tls_lib.h"
@@ -1161,7 +1161,7 @@ buffer_t *tls_client_up(buffer_t *buf, sec_suite_t *tls_suite)
         if (tls_header_ptr) {
             if (tls_header_ptr->type == TLS_HANDSHAKE && (tls_heap != 0)) {
                 tr_debug("Type:Handshake");
-                if ((tls_suite->state == TLS_CHANGE_CHIPHER)) {
+                if (tls_suite->state == TLS_CHANGE_CHIPHER) {
                     if (tls_header_ptr->length < 32) {
                         tr_debug("Too short Chiher Text");
                     } else if ((algo_ok & 0x20) && (tls_suite->state == PRF_CALC)) {
@@ -1477,7 +1477,7 @@ buffer_t *tls_server_up(buffer_t *buf, sec_suite_t *tls_suite)
         if (tls_header_ptr) {
             if (tls_header_ptr->type == TLS_HANDSHAKE && (tls_heap != 0)) {
                 tr_debug("Type:Handshake");
-                if ((tls_suite->state == TLS_CHANGE_CHIPHER)) {
+                if (tls_suite->state == TLS_CHANGE_CHIPHER) {
                     if (tls_header_ptr->length < 32) {
                         tr_debug("Too short Chiher Text");
                     } else if ((algo_ok & 0x20) && (tls_suite->state == PRF_CALC)) {

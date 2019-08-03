@@ -9,10 +9,10 @@ project(${PROJECT_NAME})
 macro(use_cxx14)
     if (CMAKE_VERSION VERSION_LESS 3.1)
         if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++98")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++14")
         endif()
     else()
-        set(CMAKE_CXX_STANDARD 98)
+        set(CMAKE_CXX_STANDARD 14)
         set(CMAKE_CXX_STANDARD_REQUIRED ON)
     endif()
 endmacro()
@@ -59,7 +59,7 @@ target_include_directories(gmock_main SYSTEM BEFORE INTERFACE
 # TESTING
 ####################
 
-enable_testing()
+include(CTest)
 
 set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
   "${CMAKE_BINARY_DIR}/Testing"
@@ -86,12 +86,17 @@ endif(COVERAGE)
 # UNIT TESTS
 ####################
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DUNITTEST")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUNITTEST")
+
 # Set include dirs.
 set(unittest-includes-base
   "${PROJECT_SOURCE_DIR}/target_h"
   "${PROJECT_SOURCE_DIR}/target_h/events"
   "${PROJECT_SOURCE_DIR}/target_h/events/equeue"
   "${PROJECT_SOURCE_DIR}/target_h/platform"
+  "${PROJECT_SOURCE_DIR}/target_h/platform/cxxsupport"
+  "${PROJECT_SOURCE_DIR}/target_h/drivers"
   "${PROJECT_SOURCE_DIR}/stubs"
   "${PROJECT_SOURCE_DIR}/.."
   "${PROJECT_SOURCE_DIR}/../features"

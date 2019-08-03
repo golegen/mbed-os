@@ -25,6 +25,10 @@
             "help": "Enable support for Ethernet interfaces",
             "value": true
         },
+        "l3ip-enabled": {
+            "help": "Enable support for L3IP interfaces",
+            "value": false
+        },
         "debug-enabled": {
             "help": "Enable debug trace support",
             "value": false
@@ -88,6 +92,18 @@
             "help": "TCP sender buffer space (bytes). Current default (used if null here) is set to (4 * TCP_MSS) in opt.h, unless overridden by target Ethernet drivers.",
             "value": null
         },
+        "tcp-maxrtx": {
+            "help": "Maximum number of retransmissions of data segments.",
+            "value": 6
+        },
+        "tcp-synmaxrtx": {
+            "help": "Maximum number of retransmissions of SYN segments. Current default (used if null here) is set to 6 in opt.h",
+            "value": null
+        },
+        "tcp-close-timeout": {
+            "help": "Maximum timeout (ms) for TCP close handshaking timeout",
+            "value": 1000
+        },
         "pbuf-pool-size": {
             "help": "Number of pbufs in pool - usually used for received packets, so this determines how much data can be buffered between reception and the application reading. If a driver uses PBUF_RAM for reception, less pool may be needed. Current default (used if null here) is set to 5 in lwipopts.h, unless overridden by target Ethernet drivers.",
             "value": null
@@ -115,16 +131,17 @@
     },
     "target_overrides": {
         "REALTEK_RTL8195AM": {
-            "tcpip-thread-stacksize": 1600
+            "tcpip-thread-stacksize": 1600,
+            "mem-size": 12800
         },
         "UBLOX_EVK_ODIN_W2": {
             "pbuf-pool-size" :  10
         },
         "STM": {
-            "mem-size": 25600
+            "mem-size": 2310
         },
         "Freescale": {
-            "mem-size": 36560
+            "mem-size": 33270
         },
         "LPC1768": {
             "mem-size": 16362
@@ -158,11 +175,70 @@
             "pbuf-pool-size": 16,
             "mem-size": 51200
         },
+        "CYW943012P6EVB_01": {
+            "tcpip-thread-stacksize": 8192,
+            "default-thread-stacksize": 640,
+            "ppp-thread-stacksize": 896,
+            "memp-num-tcp-seg": 24,
+            "tcp-socket-max": 10,
+            "udp-socket-max":10,
+            "socket-max":18,
+            "tcp-mss": 1540,
+            "tcp-snd-buf": "(6 * TCP_MSS)",
+            "tcp-wnd": "(TCP_MSS * 6)",
+            "pbuf-pool-size": 48,
+            "mem-size": 65536
+        },
+        "CY8CPROTO_062_4343W": {
+            "tcpip-thread-stacksize": 8192,
+            "default-thread-stacksize": 640,
+            "ppp-thread-stacksize": 896,
+            "memp-num-tcp-seg": 24,
+            "tcp-socket-max": 10,
+            "udp-socket-max":10,
+            "socket-max":18,
+            "tcp-mss": 1540,
+            "tcp-snd-buf": "(6 * TCP_MSS)",
+            "tcp-wnd": "(TCP_MSS * 6)",
+            "pbuf-pool-size": 96,
+            "mem-size": 92610
+        },
+        "CY8CKIT_062_WIFI_BT": {
+            "tcpip-thread-stacksize": 8192,
+            "default-thread-stacksize": 640,
+            "ppp-thread-stacksize": 896,
+            "memp-num-tcp-seg": 48,
+            "tcp-socket-max": 10,
+            "udp-socket-max":10,
+            "socket-max":18,
+            "tcp-mss": 1540,
+            "tcp-snd-buf": "(6 * TCP_MSS)",
+            "tcp-wnd": "(TCP_MSS * 6)",
+            "pbuf-pool-size": 48,
+            "mem-size": 65536
+        },
+        "CY8CKIT_062S2_43012": {
+           "tcpip-thread-stacksize": 8192,
+           "default-thread-stacksize": 640,
+           "ppp-thread-stacksize": 896,
+           "memp-num-tcp-seg": 24,
+           "tcp-socket-max": 10,
+           "udp-socket-max":10,
+           "socket-max":18,
+           "tcp-mss": 1540,
+           "tcp-snd-buf": "(6 * TCP_MSS)",
+           "tcp-wnd": "(TCP_MSS * 6)",
+           "pbuf-pool-size": 96,
+           "mem-size": 92610
+        },
         "MIMXRT1050_EVK": {
             "mem-size": 36560
         },
         "FVP_MPS2_M3": {
             "mem-size": 36560
+        },
+        "MTS_DRAGONFLY_F411RE": {
+            "tcpip-thread-stacksize": 1600
         }
     }
 }

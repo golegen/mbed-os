@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, Arm Limited and affiliates.
+ * Copyright (c) 2015-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: BSD-3-Clause
  *
  * Redistribution and use in source and binary forms, with or without
@@ -73,7 +73,7 @@
 #include "Service_Libs/blacklist/blacklist.h"
 #include "6LoWPAN/MAC/mac_helper.h"
 #include "6LoWPAN/MAC/mac_data_poll.h"
-#include "Core/include/address.h"
+#include "Core/include/ns_address_internal.h"
 #include "Service_Libs/mac_neighbor_table/mac_neighbor_table.h"
 
 #define TRACE_GROUP "tebs"
@@ -470,8 +470,9 @@ static bool thread_host_prefer_parent_response(protocol_interface_info_entry_t *
 {
     (void) connectivity;
     (void) cur;
+    bool cur_version = thread_extension_version_check(thread_info(cur)->version);
 
-    if (!thread_extension_version_check(thread_info(cur)->version)) {
+    if (!cur_version) {
         return false;
     }
 
@@ -896,6 +897,7 @@ static void thread_mle_child_request_receive_cb(int8_t interface_id, mle_message
             parent->shortAddress = scan_result->shortAddress;
             parent->router_id = (scan_result->shortAddress >> 10);
             memcpy(parent->mac64, scan_result->mac64, 8);
+            parent->version = scan_result->version;
             //Check Network Data TLV
             if (networkDataTlv.tlvType == MLE_TYPE_NETWORK_DATA) {
                 thread_bootstrap_network_data_save(cur, &leaderData, networkDataTlv.dataPtr, networkDataTlv.tlvLen);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2017, Arm Limited and affiliates.
+ * Copyright (c) 2014-2018, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,7 @@ void DHCPv6_server_service_callback_set(int8_t interface, uint8_t guaPrefix[stat
  *  /param guaPrefix Prefix which will be removed
  *  /param delete_gua_addresses Whether or not assigned addresses with the prefix should be removed from the interface.
  */
-void DHCPv6_server_service_delete(int8_t interface, uint8_t guaPrefix[static 16], bool delete_gua_addresses);
+void DHCPv6_server_service_delete(int8_t interface, uint8_t guaPrefix[static 8], bool delete_gua_addresses);
 
 
 void DHCPv6_server_service_timeout_cb(uint32_t timeUpdateInSeconds);

@@ -25,6 +25,7 @@ extern "C" {
 #define VERSION             0xC1
 #define FIFO_SIZE           128
 #define SPI_HEADER_LENGTH   2
+#define RSSI_SETTLING_TIME  250
 
 #define S2LP_GPIO0   0
 #define S2LP_GPIO1   1
@@ -226,7 +227,7 @@ extern "C" {
 #define SFD0 0x90
 #define SFD1 0x4e
 
-#define DEVIATION               125000
+#define DEFAULT_DEVIATION       125000
 #define RX_FILTER_BANDWIDTH     540000
 #define RSSI_THRESHOLD          -60
 
@@ -242,6 +243,8 @@ extern "C" {
 #define PCKT_FORMAT_802_15_4    (1 << 6)
 #define PCKT_RXMODE_FIELD       0x30
 #define PCKT_RXMODE_NORMAL      (0 << 4)
+#define PCKT_BYTE_SWAP_FIELD    0x04
+#define PCKT_BYTE_SWAP_LSB      (1 << 2)
 
 // PCKTCTRL2
 #define PCKT_FIXVARLEN_FIELD    0x01

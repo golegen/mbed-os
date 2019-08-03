@@ -44,6 +44,10 @@
 ** ###################################################################
 */
 
+#if !defined(MBED_BOOT_STACK_SIZE)
+    #define MBED_BOOT_STACK_SIZE 0x400
+#endif
+
 /* Entry Point */
 ENTRY(Reset_Handler)
 
@@ -51,9 +55,7 @@ __ram_vector_table__ = 1;
 
 /* With the RTOS in use, this does not affect the main stack size. The size of
  * the stack where main runs is determined via the RTOS. */
-__stack_size__ = 0x400;
-
-__heap_size__ = 0x6000;
+__stack_size__ = MBED_BOOT_STACK_SIZE;
 
 #if !defined(MBED_APP_START)
   #define MBED_APP_START 0
@@ -63,7 +65,6 @@ __heap_size__ = 0x6000;
   #define MBED_APP_SIZE 0x200000
 #endif
 
-HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x0400;
 STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x0400;
 M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? 0x0400 : 0x0;
 M_CRASH_DATA_RAM_SIZE = 0x100;
@@ -224,6 +225,14 @@ SECTIONS
     __data_end__ = .;        /* define a global symbol at data end */
   } > m_data
 
+  .heap_0 :
+  {
+    . = ALIGN(8);
+    __mbed_sbrk_start_0 = .;
+    . += (ORIGIN(m_data) + LENGTH(m_data) - .);
+    __mbed_krbs_start_0 = .;
+  } > m_data
+
   __DATA_END = __DATA_ROM + (__data_end__ - __data_start__);
   text_end = ORIGIN(m_text) + LENGTH(m_text);
   ASSERT(__DATA_END <= text_end, "region m_text overflowed with text and data")
@@ -248,8 +257,10 @@ SECTIONS
     . = ALIGN(8);
     __end__ = .;
     PROVIDE(end = .);
+    __mbed_sbrk_start = .;
     __HeapBase = .;
-    . += HEAP_SIZE;
+    . = ORIGIN(m_data_2) + LENGTH(m_data_2) - STACK_SIZE;
+    __mbed_krbs_start = .;
     __HeapLimit = .;
     __heap_limit = .; /* Add for _sbrk */
   } > m_data_2

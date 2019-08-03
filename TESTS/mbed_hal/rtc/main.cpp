@@ -16,7 +16,7 @@
 
 #if !DEVICE_RTC
 #error [NOT_SUPPORTED] RTC API not supported for this target
-#endif
+#else
 
 #include "utest/utest.h"
 #include "unity/unity.h"
@@ -125,7 +125,7 @@ void rtc_persist_test()
     rtc_write(start);
     rtc_free();
 
-    wait(WAIT_TIME);
+    ThisThread::sleep_for(WAIT_TIME * 1000);
 
     rtc_init();
     const uint32_t stop = rtc_read();
@@ -167,7 +167,7 @@ void rtc_range_test()
     for (uint32_t i = 0; i < sizeof(starts) / sizeof(starts[0]); i++) {
         const uint32_t start = starts[i];
         rtc_write(start);
-        wait(WAIT_TIME);
+        ThisThread::sleep_for(WAIT_TIME * 1000);
         const uint32_t stop = rtc_read();
         TEST_ASSERT_UINT32_WITHIN(WAIT_TOLERANCE, WAIT_TIME, stop - start);
     }
@@ -258,3 +258,5 @@ int main()
 {
     Harness::run(specification);
 }
+
+#endif // !DEVICE_RTC

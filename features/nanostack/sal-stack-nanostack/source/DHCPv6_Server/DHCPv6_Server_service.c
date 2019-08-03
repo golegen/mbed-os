@@ -232,7 +232,6 @@ int DHCPv6_server_service_init(int8_t interface, uint8_t guaPrefix[static 16], u
     uint16_t socketInstance;
     protocol_interface_info_entry_t *cur;
     (void)serverDUID;
-    (void)serverDUIDType;
     //allocate Socket Service
     socketInstance  = dhcp_service_init(interface, DHCP_INSTANCE_SERVER, DHCPV6_server_service_request_handler);
     cur = protocol_stack_interface_info_get_by_id(interface);
@@ -246,7 +245,7 @@ int DHCPv6_server_service_init(int8_t interface, uint8_t guaPrefix[static 16], u
         retVal = -2;
     } else {
         //allocate server
-        dhcpv6_gua_server_entry_s *serverInfo = libdhcpv6_gua_server_allocate(guaPrefix, interface, cur->mac, DHCPV6_DUID_HARDWARE_EUI64_TYPE);
+        dhcpv6_gua_server_entry_s *serverInfo = libdhcpv6_gua_server_allocate(guaPrefix, interface, cur->mac, serverDUIDType);
         if (serverInfo) {
             serverInfo->socketInstance_id = socketInstance;
             socketInstance = 0;
@@ -273,7 +272,7 @@ void DHCPv6_server_service_timeout_cb(uint32_t timeUpdateInSeconds)
  *  /param guaPrefix Prefix which will be removed
  *  /param delete_gua_addresses Whether or not assigned addresses with the prefix should be removed from the interface.
  */
-void DHCPv6_server_service_delete(int8_t interface, uint8_t guaPrefix[static 16], bool delete_gua_addresses)
+void DHCPv6_server_service_delete(int8_t interface, uint8_t guaPrefix[static 8], bool delete_gua_addresses)
 {
     dhcpv6_gua_server_entry_s *serverInfo = libdhcpv6_server_data_get_by_prefix_and_interfaceid(interface, guaPrefix);
     if (serverInfo) {
@@ -391,7 +390,7 @@ int DHCPv6_server_service_init(int8_t interface, uint8_t guaPrefix[static 16], u
 
     return -1;
 }
-void DHCPv6_server_service_delete(int8_t interface, uint8_t guaPrefix[static 16], bool delete_gua_addresses)
+void DHCPv6_server_service_delete(int8_t interface, uint8_t guaPrefix[static 8], bool delete_gua_addresses)
 {
     (void) interface;
     (void) guaPrefix;

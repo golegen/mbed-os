@@ -1,7 +1,7 @@
  /*
   *  mbedtls_device.h
   *
-  *  Copyright (C) 2018, Arm Limited, All Rights Reserved
+  *  Copyright (C) 2018-2019, Arm Limited, All Rights Reserved
   *  SPDX-License-Identifier: Apache-2.0
   *
   *  Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -24,7 +24,9 @@
 #define MBEDTLS_PLATFORM_SETUP_TEARDOWN_ALT
 #define MBEDTLS_SHA1_ALT
 #define MBEDTLS_SHA256_ALT
+//#define MBEDTLS_SHA512_ALT
 #define MBEDTLS_CCM_ALT
+//#define MBEDTLS_CMAC_ALT
 #define MBEDTLS_ECDSA_VERIFY_ALT
 #define MBEDTLS_ECDSA_SIGN_ALT
 #define MBEDTLS_ECDSA_GENKEY_ALT

@@ -25,15 +25,13 @@
   #define MBED_APP_SIZE 0x80000
 #endif
 
-/* If softdevice is present, set aside space for it */
 #if !defined(MBED_RAM_START)
-  #if defined(SOFTDEVICE_PRESENT)
-    #define MBED_RAM_START  0x200031D0
-    #define MBED_RAM_SIZE   0xCE30
-  #else
-    #define MBED_RAM_START  0x20000000
-    #define MBED_RAM_SIZE   0x10000
-  #endif
+  #define MBED_RAM_START 0x20000000
+  #define MBED_RAM_SIZE 0x10000
+#endif
+
+#if !defined(MBED_BOOT_STACK_SIZE)
+    #define MBED_BOOT_STACK_SIZE 0x800
 #endif
 
 #define MBED_RAM0_START MBED_RAM_START
@@ -232,8 +230,9 @@ SECTIONS
         *(.heap*);
 
         /* Expand the heap to reach the stack boundary. */
-        ASSERT(. <= (ORIGIN(RAM) + LENGTH(RAM) - 0x800), "heap region overflowed into stack");
-        . += (ORIGIN(RAM) + LENGTH(RAM) - 0x800) - .;
+        ASSERT(. <= (ORIGIN(RAM) + LENGTH(RAM) - MBED_BOOT_STACK_SIZE), "heap region overflowed into stack");
+        . = ORIGIN(RAM) + LENGTH(RAM) - MBED_BOOT_STACK_SIZE;
+        __HeapLimit = .;
     } > RAM
     PROVIDE(__heap_start = ADDR(.heap));
     PROVIDE(__heap_size = SIZEOF(.heap));
@@ -247,12 +246,12 @@ SECTIONS
     {
         __StackLimit = .;
         *(.stack*)
-        . += (ORIGIN(RAM) + LENGTH(RAM) - .);
+        . = ORIGIN(RAM) + LENGTH(RAM);
     } > RAM
 
     /* Set the stack top to the end of RAM and move down the stack limit by
      * the size of the stack_dummy section. */
     __StackTop = ORIGIN(RAM) + LENGTH(RAM);
-    __StackLimit = __StackTop - SIZEOF(.stack);
+    __StackLimit = __StackTop - MBED_BOOT_STACK_SIZE;
     PROVIDE(__stack = __StackTop);
 }

@@ -127,10 +127,10 @@ static inline void uart_irq(uint32_t transmit_empty, uint32_t receive_full, uint
     }
 
     if (serial_irq_ids[index] != 0) {
-        if (transmit_empty)
+        if (transmit_empty && (UART_GetEnabledInterrupts(uart_addrs[index]) & kUART_TxDataRegEmptyInterruptEnable))
             irq_handler(serial_irq_ids[index], TxIrq);
 
-        if (receive_full)
+        if (receive_full && (UART_GetEnabledInterrupts(uart_addrs[index]) & kUART_RxDataRegFullInterruptEnable))
             irq_handler(serial_irq_ids[index], RxIrq);
     }
 }
@@ -318,6 +318,26 @@ void serial_set_flow_control(serial_t *obj, FlowControl type, PinName rxflow, Pi
         default:
             break;
     }
+}
+
+const PinMap *serial_tx_pinmap()
+{
+    return PinMap_UART_TX;
+}
+
+const PinMap *serial_rx_pinmap()
+{
+    return PinMap_UART_RX;
+}
+
+const PinMap *serial_cts_pinmap()
+{
+    return PinMap_UART_CTS;
+}
+
+const PinMap *serial_rts_pinmap()
+{
+    return PinMap_UART_RTS;
 }
 
 #endif

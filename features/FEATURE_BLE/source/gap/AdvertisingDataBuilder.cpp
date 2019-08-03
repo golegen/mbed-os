@@ -331,7 +331,7 @@ uint8_t *AdvertisingDataBuilder::findField(adv_data_type_t type)
     for (uint8_t idx = 0; idx < _payload_length;) {
         uint8_t fieldType = _buffer[idx + FIELD_TYPE_INDEX];
 
-        if (fieldType == type) {
+        if (fieldType == type.value()) {
             return _buffer.data() + idx;
         }
 
@@ -498,7 +498,7 @@ ble_error_t AdvertisingDataBuilder::setUUIDData(
     size_t old_size = getFieldSize(shortType) + getFieldSize(longType);
 
     /* if we can't fit the new data do not proceed */
-    if (new_size > data.size() - (_payload_length - old_size)) {
+    if (new_size > _buffer.size() - (_payload_length - old_size)) {
         return BLE_ERROR_BUFFER_OVERFLOW;
     }
 

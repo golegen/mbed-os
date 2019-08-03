@@ -52,7 +52,6 @@ int AT_CellularStack::find_socket_index(nsapi_socket_t handle)
     return -1;
 }
 
-
 /** NetworkStack
  */
 
@@ -60,9 +59,7 @@ const char *AT_CellularStack::get_ip_address()
 {
     _at.lock();
 
-    _at.cmd_start("AT+CGPADDR=");
-    _at.write_int(_cid);
-    _at.cmd_stop();
+    _at.cmd_start_stop("+CGPADDR", "=", "%d", _cid);
 
     _at.resp_start("+CGPADDR:");
 
@@ -70,7 +67,7 @@ const char *AT_CellularStack::get_ip_address()
 
         _at.skip_param();
 
-        int len = _at.read_string(_ip, NSAPI_IPv4_SIZE - 1);
+        int len = _at.read_string(_ip, NSAPI_IPv4_SIZE);
         if (len == -1) {
             _ip[0] = '\0';
             _at.resp_stop();
@@ -81,7 +78,7 @@ const char *AT_CellularStack::get_ip_address()
 
         // in case stack type is not IPV4 only, try to look also for IPV6 address
         if (_stack_type != IPV4_STACK) {
-            (void)_at.read_string(_ip, PDP_IPV6_SIZE - 1);
+            (void)_at.read_string(_ip, PDP_IPV6_SIZE);
         }
     }
 
@@ -116,11 +113,6 @@ nsapi_error_t AT_CellularStack::socket_open(nsapi_socket_t *handle, nsapi_protoc
         }
 
         _socket = new CellularSocket*[max_socket_count];
-        if (!_socket) {
-            tr_error("No memory to open socket!");
-            _socket_mutex.unlock();
-            return NSAPI_ERROR_NO_SOCKET;
-        }
         _socket_count = max_socket_count;
         for (int i = 0; i < max_socket_count; i++) {
             _socket[i] = 0;
@@ -136,12 +128,12 @@ nsapi_error_t AT_CellularStack::socket_open(nsapi_socket_t *handle, nsapi_protoc
 
     tr_info("Socket %d open", index);
     // create local socket structure, socket on modem is created when app calls sendto/recvfrom
+    // Do not assign a socket ID yet. Socket is not created at the Modem yet.
+    // create_socket_impl(handle) will assign the correct socket ID.
     _socket[index] = new CellularSocket;
-    CellularSocket *psock;
-    psock = _socket[index];
-    memset(psock, 0, sizeof(CellularSocket));
+    CellularSocket *psock = _socket[index];
     SocketAddress addr(0, get_dynamic_ip_port());
-    psock->id = index;
+
     psock->localAddress = addr;
     psock->proto = proto;
     *handle = psock;
@@ -160,7 +152,6 @@ nsapi_error_t AT_CellularStack::socket_close(nsapi_socket_t handle)
         return err;
     }
     int sock_id = socket->id;
-    bool sock_created = socket->created;
 
     int index = find_socket_index(handle);
     if (index == -1) {
@@ -172,14 +163,14 @@ nsapi_error_t AT_CellularStack::socket_close(nsapi_socket_t handle)
 
     // Close the socket on the modem if it was created
     _at.lock();
-    if (sock_created) {
+    if (sock_id > -1) {
         err = socket_close_impl(sock_id);
     }
 
     if (!err) {
         tr_info("Socket %d closed", index);
     } else {
-        tr_info("Socket %d close (id %d, created %d, started %d, error %d)", index, sock_id, socket->created, socket->started, err);
+        tr_info("Socket %d close (id %d, started %d, error %d)", index, sock_id, socket->started, err);
     }
 
     _socket[index] = NULL;
@@ -198,16 +189,22 @@ nsapi_error_t AT_CellularStack::socket_bind(nsapi_socket_t handle, const SocketA
     }
 
     if (addr) {
-        socket->localAddress.set_addr(addr.get_addr());
-    }
-
-    if (addr.get_port()) {
-        socket->localAddress.set_port(addr.get_port());
+        return NSAPI_ERROR_UNSUPPORTED;
     }
 
     _at.lock();
 
-    if (!socket->created) {
+    uint16_t port = addr.get_port();
+    if (port != socket->localAddress.get_port()) {
+        if (port && (get_socket_index_by_port(port) == -1)) {
+            socket->localAddress.set_port(port);
+        } else {
+            _at.unlock();
+            return NSAPI_ERROR_PARAMETER;
+        }
+    }
+
+    if (socket->id == -1) {
         create_socket_impl(socket);
     }
 
@@ -252,9 +249,22 @@ nsapi_size_or_error_t AT_CellularStack::socket_sendto(nsapi_socket_t handle, con
         return NSAPI_ERROR_DEVICE_ERROR;
     }
 
+    if (socket->closed && !socket->rx_avail) {
+        tr_info("sendto socket %d closed", socket->id);
+        return NSAPI_ERROR_NO_CONNECTION;
+    }
+
+    if (size == 0) {
+        if (socket->proto == NSAPI_UDP) {
+            return NSAPI_ERROR_UNSUPPORTED;
+        } else if (socket->proto == NSAPI_TCP) {
+            return 0;
+        }
+    }
+
     nsapi_size_or_error_t ret_val = NSAPI_ERROR_OK;
 
-    if (!socket->created) {
+    if (socket->id == -1) {
         _at.lock();
 
         ret_val = create_socket_impl(socket);
@@ -298,9 +308,14 @@ nsapi_size_or_error_t AT_CellularStack::socket_recvfrom(nsapi_socket_t handle, S
         return NSAPI_ERROR_DEVICE_ERROR;
     }
 
+    if (socket->closed) {
+        tr_info("recvfrom socket %d closed", socket->id);
+        return 0;
+    }
+
     nsapi_size_or_error_t ret_val = NSAPI_ERROR_OK;
 
-    if (!socket->created) {
+    if (socket->id == -1) {
         _at.lock();
 
         ret_val = create_socket_impl(socket);
@@ -317,6 +332,11 @@ nsapi_size_or_error_t AT_CellularStack::socket_recvfrom(nsapi_socket_t handle, S
     ret_val = socket_recvfrom_impl(socket, addr, buffer, size);
 
     _at.unlock();
+
+    if (socket->closed) {
+        tr_info("recvfrom socket %d closed", socket->id);
+        return 0;
+    }
 
     if (ret_val >= 0) {
         if (addr) {
@@ -339,4 +359,30 @@ void AT_CellularStack::socket_attach(nsapi_socket_t handle, void (*callback)(voi
     }
     socket->_cb = callback;
     socket->_data = data;
+}
+
+int AT_CellularStack::get_socket_index_by_port(uint16_t port)
+{
+    int max_socket_count = get_max_socket_count();
+    for (int i = 0; i < max_socket_count; i++) {
+        if (_socket[i]->localAddress.get_port() == port) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+AT_CellularStack::CellularSocket *AT_CellularStack::find_socket(int sock_id)
+{
+    CellularSocket *sock = NULL;
+    for (int i = 0; i < _socket_count; i++) {
+        if (_socket[i] && _socket[i]->id == sock_id) {
+            sock = _socket[i];
+            break;
+        }
+    }
+    if (!sock) {
+        tr_error("Socket not found %d", sock_id);
+    }
+    return sock;
 }

@@ -29,7 +29,7 @@ using namespace mbed;
 
 #if !DEVICEKEY_ENABLED
 #error [NOT_SUPPORTED] DeviceKey needs to be enabled for this test
-#endif
+#else
 
 #define MSG_VALUE_DUMMY "0"
 #define MSG_VALUE_LEN 32
@@ -51,7 +51,7 @@ void generate_derived_key_consistency_32_byte_key_long_consistency_test(char *ke
  */
 int inject_dummy_rot_key()
 {
-#if !defined(DEVICE_TRNG)
+#if !DEVICE_TRNG
     uint32_t key[DEVICE_KEY_16BYTE / sizeof(uint32_t)];
 
     memcpy(key, "1234567812345678", DEVICE_KEY_16BYTE);
@@ -499,3 +499,4 @@ int main()
     return ret;
 }
 
+#endif // !DEVICEKEY_ENABLED

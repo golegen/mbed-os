@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014-2018, Arm Limited and affiliates.
+ * Copyright (c) 2012, 2014-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,7 +24,7 @@
 #define IPV6_ROUTING_TABLE_H_
 
 #include "ns_list.h"
-#include "Core/include/address.h"
+#include "Core/include/ns_address_internal.h"
 
 /* Address Resolution and Neighbour Unreachablity Detection constants from
  * RFC 4861, updated by RFC 7048.
@@ -119,10 +119,12 @@ typedef struct ipv6_neighbour_cache {
     bool                                    send_addr_reg : 1;
     bool                                    recv_addr_reg : 1;
     bool                                    send_nud_probes : 1;
+    bool                                    probe_avoided_routers : 1;
     bool                                    recv_ns_aro : 1;
     bool                                    recv_na_aro : 1;
     bool                                    use_eui64_as_slla_in_aro : 1;
-    bool                                    omit_aro_success : 1;
+    bool                                    omit_na_aro_success : 1;
+    bool                                    omit_na : 1; // except for ARO successes which have a separate flag
     int8_t                                  interface_id;
     uint8_t                                 max_ll_len;
     uint8_t                                 gc_timer;
@@ -159,6 +161,7 @@ extern bool ipv6_neighbour_addr_is_probably_reachable(ipv6_neighbour_cache_t *ca
 extern bool ipv6_neighbour_ll_addr_match(const ipv6_neighbour_t *entry, addrtype_t ll_type, const uint8_t *ll_address);
 extern void ipv6_neighbour_invalidate_ll_addr(ipv6_neighbour_cache_t *cache, addrtype_t ll_type, const uint8_t *ll_address);
 extern void ipv6_neighbour_delete_registered_by_eui64(ipv6_neighbour_cache_t *cache, const uint8_t *eui64);
+extern bool ipv6_neighbour_has_registered_by_eui64(ipv6_neighbour_cache_t *cache, const uint8_t *eui64);
 extern void ipv6_neighbour_entry_update_unsolicited(ipv6_neighbour_cache_t *cache, ipv6_neighbour_t *entry, addrtype_t type, const uint8_t *ll_address/*, bool tentative*/);
 extern ipv6_neighbour_t *ipv6_neighbour_update_unsolicited(ipv6_neighbour_cache_t *cache, const uint8_t *ip_address, addrtype_t ll_type, const uint8_t *ll_address);
 extern void ipv6_neighbour_reachability_confirmation(const uint8_t ip_address[__static 16], int8_t interface_id);
@@ -168,8 +171,9 @@ extern void ipv6_neighbour_cache_fast_timer(ipv6_neighbour_cache_t *cache, uint1
 extern void ipv6_neighbour_cache_slow_timer(ipv6_neighbour_cache_t *cache, uint8_t seconds);
 extern void ipv6_neighbour_cache_print(const ipv6_neighbour_cache_t *cache, route_print_fn_t *print_fn);
 extern void ipv6_router_gone(ipv6_neighbour_cache_t *cache, ipv6_neighbour_t *entry);
-
 extern int8_t ipv6_neighbour_set_current_max_cache(uint16_t max_cache);
+extern int8_t ipv6_destination_cache_configure(uint16_t max_entries, uint16_t short_term_threshold, uint16_t long_term_threshold, uint16_t lifetime);
+extern int8_t ipv6_neighbour_cache_configure(uint16_t max_entries, uint16_t short_term_threshold, uint16_t long_term_threshold, uint16_t lifetime);
 
 /* Backwards compatibility with test app */
 #define ROUTE_RPL_UP ROUTE_RPL_DIO

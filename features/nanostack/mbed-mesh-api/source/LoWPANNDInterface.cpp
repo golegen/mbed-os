@@ -33,7 +33,7 @@ public:
     virtual nsapi_error_t bringdown();
     virtual char *get_gateway(char *buf, nsapi_size_t buflen);
 
-    friend Nanostack;
+    friend class Nanostack;
     friend class ::LoWPANNDInterface;
 private:
     LoWPANNDInterface(NanostackRfPhy &phy) : MeshInterface(phy) { }
@@ -92,11 +92,7 @@ nsapi_error_t Nanostack::LoWPANNDInterface::bringup(bool dhcp, const char *ip,
 
     if (blocking) {
         // wait connection for ever
-        int32_t count = connect_semaphore.wait(osWaitForever);
-
-        if (count <= 0) {
-            return NSAPI_ERROR_DHCP_FAILURE; // sort of...
-        }
+        connect_semaphore.acquire();
     }
     return 0;
 
@@ -178,8 +174,19 @@ bool LoWPANNDInterface::getRouterIpAddress(char *address, int8_t len)
 #if MBED_CONF_NSAPI_DEFAULT_MESH_TYPE == LOWPAN && DEVICE_802_15_4_PHY
 MBED_WEAK MeshInterface *MeshInterface::get_target_default_instance()
 {
-    static LoWPANNDInterface lowpan(&NanostackRfPhy::get_default_instance());
-
-    return &lowpan;
+    static bool inited;
+    static LoWPANNDInterface interface;
+    singleton_lock();
+    if (!inited) {
+        nsapi_error_t result = interface.initialize(&NanostackRfPhy::get_default_instance());
+        if (result != 0) {
+            tr_error("LoWPANND initialize failed: %d", result);
+            singleton_unlock();
+            return NULL;
+        }
+        inited = true;
+    }
+    singleton_unlock();
+    return &interface;
 }
 #endif

@@ -131,10 +131,10 @@ static inline void uart_irq(uint32_t transmit_empty, uint32_t receive_full, uint
     }
 
     if (serial_irq_ids[index] != 0) {
-        if (transmit_empty)
+        if (transmit_empty && (LPUART_GetEnabledInterrupts(uart_addrs[index]) & kLPUART_TxDataRegEmptyInterruptEnable))
             irq_handler(serial_irq_ids[index], TxIrq);
 
-        if (receive_full)
+        if (receive_full && (LPUART_GetEnabledInterrupts(uart_addrs[index]) & kLPUART_RxDataRegFullInterruptEnable))
             irq_handler(serial_irq_ids[index], RxIrq);
     }
 }
@@ -248,6 +248,38 @@ void serial_break_set(serial_t *obj)
 void serial_break_clear(serial_t *obj)
 {
     uart_addrs[obj->index]->CTRL &= ~LPUART_CTRL_SBK_MASK;
+}
+
+const PinMap *serial_tx_pinmap()
+{
+    return PinMap_UART_TX;
+}
+
+const PinMap *serial_rx_pinmap()
+{
+    return PinMap_UART_RX;
+}
+
+const PinMap *serial_cts_pinmap()
+{
+#if !DEVICE_SERIAL_FC
+    static const PinMap PinMap_UART_CTS[] = {
+        {NC, NC, 0}
+    };
+#endif
+
+    return PinMap_UART_CTS;
+}
+
+const PinMap *serial_rts_pinmap()
+{
+#if !DEVICE_SERIAL_FC
+    static const PinMap PinMap_UART_RTS[] = {
+        {NC, NC, 0}
+    };
+#endif
+
+    return PinMap_UART_RTS;
 }
 
 #endif

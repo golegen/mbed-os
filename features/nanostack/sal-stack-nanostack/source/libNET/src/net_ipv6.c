@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017, Arm Limited and affiliates.
+ * Copyright (c) 2016-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +21,7 @@
 #include "ns_types.h"
 #include "nsdynmemLIB.h"
 
-#include "Core/include/address.h"
+#include "Core/include/ns_address_internal.h"
 #include "Common_Protocols/ipv6_flow.h"
 #include "Common_Protocols/ipv6_fragmentation.h"
 #include "NWK_INTERFACE/Include/protocol.h"
@@ -41,6 +41,16 @@ int8_t arm_nwk_ipv6_frag_mru(uint16_t frag_mru)
 int8_t arm_nwk_ipv6_max_cache_entries(uint16_t max_entries)
 {
     return ipv6_neighbour_set_current_max_cache(max_entries);
+}
+
+int8_t arm_nwk_ipv6_destination_cache_configure(uint16_t max_entries, uint16_t short_term_threshold, uint16_t long_term_threshold, uint16_t lifetime)
+{
+    return ipv6_destination_cache_configure(max_entries, short_term_threshold, long_term_threshold, lifetime);
+}
+
+int8_t arm_nwk_ipv6_neighbour_cache_configure(uint16_t max_entries, uint16_t short_term_threshold, uint16_t long_term_threshold, uint16_t lifetime)
+{
+    return ipv6_neighbour_cache_configure(max_entries, short_term_threshold, long_term_threshold, lifetime);
 }
 
 void arm_nwk_ipv6_auto_flow_label(bool auto_flow_label)

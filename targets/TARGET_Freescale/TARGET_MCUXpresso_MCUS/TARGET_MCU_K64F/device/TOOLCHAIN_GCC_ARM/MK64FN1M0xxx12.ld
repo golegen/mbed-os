@@ -65,13 +65,8 @@ __ram_vector_table__ = 1;
     #define MBED_BOOT_STACK_SIZE 0x400
 #endif
 
-/* With the RTOS in use, this does not affect the main stack size. The size of
- * the stack where main runs is determined via the RTOS. */
 __stack_size__ = MBED_BOOT_STACK_SIZE;
 
-__heap_size__ = 0x6000;
-
-HEAP_SIZE  = DEFINED(__heap_size__)  ? __heap_size__  : 0x0400;
 STACK_SIZE = DEFINED(__stack_size__) ? __stack_size__ : 0x0400;
 M_VECTOR_RAM_SIZE = DEFINED(__ram_vector_table__) ? 0x0400 : 0x0;
 M_CRASH_DATA_RAM_SIZE = 0x100;
@@ -201,7 +196,7 @@ SECTIONS
     . = ALIGN(8);
     __interrupts_ram_end__ = .; /* Define a global symbol at data end */
   } > m_data
-  
+
   .crash_data_ram :
   {
     . = ALIGN(8);
@@ -214,6 +209,13 @@ SECTIONS
     __CRASH_DATA_RAM_END__ = .; /* Define a global symbol at data end */
   } > m_data
 
+  .heap_0 :
+  {
+    . = ALIGN(8);
+    __mbed_sbrk_start_0 = .;
+    . += (ORIGIN(m_data) + LENGTH(m_data) - .);
+    __mbed_krbs_start_0 = .;
+  } > m_data
 
   __VECTOR_RAM = DEFINED(__ram_vector_table__) ? __VECTOR_RAM__ : ORIGIN(m_interrupts);
   __RAM_VECTOR_TABLE_SIZE_BYTES = DEFINED(__ram_vector_table__) ? (__interrupts_ram_end__ - __interrupts_ram_start__) : 0x0;
@@ -275,8 +277,10 @@ SECTIONS
     . = ALIGN(8);
     __end__ = .;
     PROVIDE(end = .);
+    __mbed_sbrk_start = .;
     __HeapBase = .;
     . = ORIGIN(m_data_2) + LENGTH(m_data_2) - STACK_SIZE;
+    __mbed_krbs_start = .;
     __HeapLimit = .;
     __heap_limit = .; /* Add for _sbrk */
   } > m_data_2

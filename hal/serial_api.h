@@ -21,6 +21,7 @@
 #define MBED_SERIAL_API_H
 
 #include "device.h"
+#include "pinmap.h"
 #include "hal/buffer.h"
 #include "hal/dma_api.h"
 
@@ -210,6 +211,7 @@ void serial_break_clear(serial_t *obj);
  */
 void serial_pinout_tx(PinName tx);
 
+#if DEVICE_SERIAL_FC
 /** Configure the serial for the flow control. It sets flow control in the hardware
  *  if a serial peripheral supports it, otherwise software emulation is used.
  *
@@ -219,6 +221,45 @@ void serial_pinout_tx(PinName tx);
  * @param txflow The RX pin name
  */
 void serial_set_flow_control(serial_t *obj, FlowControl type, PinName rxflow, PinName txflow);
+#endif
+
+/** Get the pins that support Serial TX
+ *
+ * Return a PinMap array of pins that support Serial TX. The
+ * array is terminated with {NC, NC, 0}.
+ *
+ * @return PinMap array
+ */
+const PinMap *serial_tx_pinmap(void);
+
+/** Get the pins that support Serial RX
+ *
+ * Return a PinMap array of pins that support Serial RX. The
+ * array is terminated with {NC, NC, 0}.
+ *
+ * @return PinMap array
+ */
+const PinMap *serial_rx_pinmap(void);
+
+#if DEVICE_SERIAL_FC
+/** Get the pins that support Serial CTS
+ *
+ * Return a PinMap array of pins that support Serial CTS. The
+ * array is terminated with {NC, NC, 0}.
+ *
+ * @return PinMap array
+ */
+const PinMap *serial_cts_pinmap(void);
+
+/** Get the pins that support Serial RTS
+ *
+ * Return a PinMap array of pins that support Serial RTS. The
+ * array is terminated with {NC, NC, 0}.
+ *
+ * @return PinMap array
+ */
+const PinMap *serial_rts_pinmap(void);
+#endif
 
 #if DEVICE_SERIAL_ASYNCH
 

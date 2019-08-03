@@ -19,7 +19,7 @@
 #if !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || \
     (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI && !defined(MBED_CONF_NSAPI_DEFAULT_WIFI_SSID))
 #error [NOT_SUPPORTED] No network configuration found for this target.
-#endif
+#else
 
 #include "mbed.h"
 #include "greentea-client/test_env.h"
@@ -33,7 +33,11 @@ using namespace utest::v1;
 // Test setup
 utest::v1::status_t test_setup(const size_t number_of_cases)
 {
+#ifdef MBED_GREENTEA_TEST_INTERFACE_TIMEOUT_S
+    GREENTEA_SETUP(MBED_GREENTEA_TEST_INTERFACE_TIMEOUT_S, "default_auto");
+#else
     GREENTEA_SETUP(480, "default_auto");
+#endif
     return verbose_test_setup_handler(number_of_cases);
 }
 
@@ -50,3 +54,5 @@ int main()
 {
     return !Harness::run(specification);
 }
+
+#endif // !defined(MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE) || (MBED_CONF_TARGET_NETWORK_DEFAULT_INTERFACE_TYPE == WIFI && !defined(MBED_CONF_NSAPI_DEFAULT_WIFI_SSID))

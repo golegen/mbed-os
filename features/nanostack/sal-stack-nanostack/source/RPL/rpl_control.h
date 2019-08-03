@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, Arm Limited and affiliates.
+ * Copyright (c) 2015-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -127,6 +127,7 @@ void rpl_control_delete_dodag_root(rpl_domain_t *domain, struct rpl_dodag *dodag
 void rpl_control_update_dodag_route(struct rpl_dodag *dodag, const uint8_t *prefix, uint8_t prefix_len, uint8_t flags, uint32_t lifetime, bool age);
 void rpl_control_update_dodag_prefix(struct rpl_dodag *dodag, const uint8_t *prefix, uint8_t prefix_len, uint8_t flags, uint32_t lifetime, uint32_t preftime, bool age);
 void rpl_control_increment_dodag_version(struct rpl_dodag *dodag);
+void rpl_control_update_dodag_config(struct rpl_dodag *dodag, const rpl_dodag_conf_t *conf);
 void rpl_control_set_dodag_pref(struct rpl_dodag *dodag, uint8_t pref);
 void rpl_control_increment_dtsn(struct rpl_dodag *dodag);
 
@@ -148,6 +149,8 @@ void rpl_control_publish_host_address(rpl_domain_t *domain, const uint8_t addr[1
 void rpl_control_unpublish_address(rpl_domain_t *domain, const uint8_t addr[16]);
 void rpl_control_register_address(struct protocol_interface_info_entry *interface, if_address_entry_t *addr);
 void rpl_control_address_register_done(struct buffer *buf, uint8_t status);
+bool rpl_control_is_dodag_parent(struct protocol_interface_info_entry *interface, const uint8_t ll_addr[16]);
+void rpl_control_neighbor_delete(struct protocol_interface_info_entry *interface, const uint8_t ll_addr[16]);
 
 /* Configure and return the routing lookup predicate for a specified RPL instance ID */
 ipv6_route_predicate_fn_t *rpl_control_get_route_predicate(rpl_domain_t *domain, uint8_t instance_id, const uint8_t src[16], const uint8_t dst[16]);
@@ -157,7 +160,7 @@ void rpl_control_print(route_print_fn_t *print_fn);
 
 struct rpl_instance *rpl_control_enumerate_instances(rpl_domain_t *domain, struct rpl_instance *instance);
 struct rpl_instance *rpl_control_lookup_instance(rpl_domain_t *domain, uint8_t instance_id, const uint8_t *dodagid);
-bool rpl_control_get_instance_dao_target_count(rpl_domain_t *domain, uint8_t instance_id, const uint8_t *dodagid, uint16_t *target_count);
+bool rpl_control_get_instance_dao_target_count(rpl_domain_t *domain, uint8_t instance_id, const uint8_t *dodagid, const uint8_t *prefix, uint16_t *target_count);
 bool rpl_control_read_dodag_info(const struct rpl_instance *instance, struct rpl_dodag_info_t *dodag_info);
 const rpl_dodag_conf_t *rpl_control_get_dodag_config(const struct rpl_instance *instance);
 const uint8_t *rpl_control_preferred_parent_addr(const struct rpl_instance *instance, bool global);

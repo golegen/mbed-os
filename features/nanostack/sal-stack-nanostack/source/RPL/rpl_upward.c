@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2018, Arm Limited and affiliates.
+ * Copyright (c) 2015-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,7 @@
 
 #include "net_interface.h"
 
-#include "Core/include/address.h"
+#include "Core/include/ns_address_internal.h"
 #include "Common_Protocols/icmpv6.h"
 #include "Common_Protocols/icmpv6_prefix.h"
 #include "NWK_INTERFACE/Include/protocol_abstract.h"
@@ -932,6 +932,33 @@ const prefix_list_t *rpl_dodag_get_prefix_list(const rpl_dodag_t *dodag)
 {
     return &dodag->prefixes;
 }
+
+/* Called before updating all prefixes in a DIO */
+void rpl_dodag_update_unpublished_dio_prefix_start(rpl_dodag_t *dodag)
+{
+    /* Clear age flags - will use as a marker for entries being in the DIO */
+    ns_list_foreach(prefix_entry_t, entry, &dodag->prefixes) {
+        if (!(entry->options & RPL_PIO_PUBLISHED)) {
+            entry->options &= ~RPL_PIO_AGE;
+        }
+    }
+}
+
+
+/* Called after updating all prefixes in a DIO */
+void rpl_dodag_update_unpublished_dio_prefix_finish(rpl_dodag_t *dodag)
+{
+    /* Any remaining non-published entries that don't have the age flag
+     * set are not being sent by parent any more, so we should stop sending
+     * too, except for the minimimum count requirement on 0 lifetime.
+     */
+    ns_list_foreach_safe(prefix_entry_t, entry, &dodag->prefixes) {
+        if ((entry->options & (RPL_PIO_PUBLISHED | RPL_PIO_AGE | RPL_PIO_HOLD_MASK)) == 0) {
+            rpl_dodag_delete_dio_prefix(dodag, entry);
+        }
+    }
+}
+
 prefix_entry_t *rpl_dodag_update_dio_prefix(rpl_dodag_t *dodag, const uint8_t *prefix, uint8_t prefix_len, uint8_t flags, uint32_t lifetime, uint32_t preftime, bool publish, bool age)
 {
     /* Don't let them set funny flags - we won't propagate them either.
@@ -948,20 +975,30 @@ prefix_entry_t *rpl_dodag_update_dio_prefix(rpl_dodag_t *dodag, const uint8_t *p
         flags |= RPL_PIO_AGE;
     }
 
-    if (lifetime == 0) {
-        flags |= RPL_MAX_FINAL_RTR_ADVERTISEMENTS;
-    }
-
-    prefix_entry_t *entry = icmpv6_prefix_add(&dodag->prefixes, prefix, prefix_len, lifetime, preftime, flags);
+    prefix_entry_t *entry = icmpv6_prefix_add(&dodag->prefixes, prefix, prefix_len, lifetime, preftime, 0xff);
     /* icmpv6_prefix_add indicates a new entry by leaving options set to 0xFF */
     if (entry) {
+        /* Newly-seen zero lifetimes should be advertised at least a few times -
+         * count this down in the RPL_PIO_HOLD_COUNT field
+         */
+        if (lifetime == 0 && (entry->options == 0xFF || entry->lifetime != 0)) {
+            flags |= RPL_MAX_FINAL_RTR_ADVERTISEMENTS;
+        }
         entry->options = flags;
+        entry->lifetime = lifetime;
+        entry->preftime = preftime;
     }
     return entry;
 }
 
 void rpl_dodag_delete_dio_prefix(rpl_dodag_t *dodag, prefix_entry_t *prefix)
 {
+    rpl_instance_t *instance = dodag->instance;
+
+    if (instance && instance->domain->prefix_cb) {
+        instance->domain->prefix_cb(prefix, instance->domain->cb_handle, NULL);
+    }
+
     ns_list_remove(&dodag->prefixes, prefix);
     ns_dyn_mem_free(prefix);
 }
@@ -984,7 +1021,11 @@ static void rpl_dodag_age_prefixes(rpl_dodag_t *dodag, uint16_t seconds)
                 prefix->lifetime -= seconds;
             } else {
                 prefix->lifetime = 0;
-                if ((prefix->options & RPL_PIO_HOLD_MASK) == 0) {
+                /* Only delete on timeout if we're publishing - otherwise we will
+                 * keep advertising until we see our parent stop advertising it - deletion
+                 * is handled in rpl_control_process_prefix_options.
+                 */
+                if ((prefix->options & (RPL_PIO_PUBLISHED | RPL_PIO_HOLD_MASK)) == RPL_PIO_PUBLISHED) {
                     rpl_dodag_delete_dio_prefix(dodag, prefix);
                 }
             }
@@ -1564,6 +1605,29 @@ uint16_t rpl_instance_current_rank(const rpl_instance_t *instance)
     return instance->current_rank;
 }
 
+bool rpl_instance_address_is_parent(rpl_instance_t *instance, const uint8_t *ipv6_addr)
+{
+    ns_list_foreach(rpl_neighbour_t, neighbour, &instance->candidate_neighbours) {
+        if (neighbour->dodag_parent && addr_ipv6_equal(neighbour->ll_address, ipv6_addr)) {
+            return true;
+        }
+        if (!neighbour->dodag_parent) {
+            // list is ordered so first encounter of false means no more parents in list
+            return false;
+        }
+    }
+    return false;
+}
+void rpl_instance_neighbor_delete(rpl_instance_t *instance, const uint8_t *ipv6_addr)
+{
+    ns_list_foreach_safe(rpl_neighbour_t, neighbour, &instance->candidate_neighbours) {
+        if (addr_ipv6_equal(neighbour->ll_address, ipv6_addr)) {
+            rpl_delete_neighbour(instance, neighbour);
+        }
+    }
+    return;
+}
+
 void rpl_instance_slow_timer(rpl_instance_t *instance, uint16_t seconds)
 {
     ns_list_foreach(rpl_dodag_t, dodag, &instance->dodags) {
@@ -1719,8 +1783,19 @@ void rpl_upward_print_instance(rpl_instance_t *instance, route_print_fn_t *print
     }
 }
 
-uint16_t rpl_upward_read_dao_target_list_size(const rpl_instance_t *instance)
+uint16_t rpl_upward_read_dao_target_list_size(const rpl_instance_t *instance, const uint8_t *target_prefix)
 {
+
+    if (target_prefix) {
+        uint16_t registered_address_count = 0;
+        ns_list_foreach(rpl_dao_target_t, target, &instance->dao_targets) {
+            if (bitsequal(target->prefix, target_prefix, 64)) {
+                registered_address_count++;
+            }
+        }
+        return registered_address_count;
+    }
+
     return ns_list_count(&instance->dao_targets);
 }
 

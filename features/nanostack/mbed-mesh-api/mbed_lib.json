@@ -1,8 +1,9 @@
 {
     "name": "mbed-mesh-api",
+    "requires": ["nanostack"],
     "config": {
         "heap-size": {
-            "help": "Nanostack's heap size [bytes: 0-65534]",
+            "help": "Nanostack's heap size [bytes: 0-‭4294967295‬]",
             "value": 32500
         },
         "use-malloc-for-heap": {
@@ -111,7 +112,7 @@
         },
         "wisun-network-name": {
             "help": "default network name for wisun network",
-            "value": "\"NETWORK_NAME\""
+            "value": "\"Wi-SUN Network\""
         },
         "wisun-regulatory-domain": {
             "help": "Regulator domain.",
@@ -152,6 +153,22 @@
         "wisun-uc-dwell-interval": {
             "help": "Unicast dwell interval. Range: 15-255 milliseconds",
             "value": 0
+        },
+        "certificate-header": {
+            "help": "File name of the certificate header file (used on include directive)",
+            "value": null
+        },
+        "root-certificate": {
+            "help": "Root certificate in PEM format (must be a null terminated c-string)",
+            "value": null
+        },
+        "own-certificate": {
+            "help": "Own certificate in PEM format (must be a null terminated c-string)",
+            "value": null
+        },
+        "own-certificate-key": {
+            "help": "Own certificate's key in PEM format (must be a null terminated c-string)",
+            "value": null
         }
     },
     "target_overrides": {
@@ -160,6 +177,9 @@
             "mbed-mesh-api.heap-size": 14000
         },
         "NCS36510": {
+            "mbed-mesh-api.heap-size": 14000
+        },
+        "KW41Z": {
             "mbed-mesh-api.heap-size": 14000
         }
     }

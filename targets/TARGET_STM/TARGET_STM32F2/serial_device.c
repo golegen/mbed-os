@@ -559,7 +559,7 @@ int serial_irq_handler_asynch(serial_t *obj)
 
     volatile int return_event = 0;
     uint8_t *buf = (uint8_t *)(obj->rx_buff.buffer);
-    uint8_t i = 0;
+    size_t i = 0;
 
     // TX PART:
     if (__HAL_UART_GET_FLAG(huart, UART_FLAG_TC) != RESET) {
@@ -696,13 +696,13 @@ void serial_set_flow_control(serial_t *obj, FlowControl type, PinName rxflow, Pi
 {
     struct serial_s *obj_s = SERIAL_S(obj);
 
-    // Determine the UART to use (UART_1, UART_2, ...)
+    // Checked used UART name (UART_1, UART_2, ...)
     UARTName uart_rts = (UARTName)pinmap_peripheral(rxflow, PinMap_UART_RTS);
     UARTName uart_cts = (UARTName)pinmap_peripheral(txflow, PinMap_UART_CTS);
-
-    // Get the peripheral name (UART_1, UART_2, ...) from the pin and assign it to the object
-    obj_s->uart = (UARTName)pinmap_merge(uart_cts, uart_rts);
-    MBED_ASSERT(obj_s->uart != (UARTName)NC);
+    if (((UARTName)pinmap_merge(uart_rts, obj_s->uart) == (UARTName)NC) || ((UARTName)pinmap_merge(uart_cts, obj_s->uart) == (UARTName)NC)) {
+        MBED_ASSERT(0);
+        return;
+    }
 
     if (type == FlowControlNone) {
         // Disable hardware flow control

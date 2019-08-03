@@ -21,9 +21,9 @@
 
 #include "mbed.h"
 
-#if !defined(MBED_CPU_STATS_ENABLED) || !defined(DEVICE_LPTICKER) || !defined(DEVICE_SLEEP)
+#if !defined(MBED_CPU_STATS_ENABLED) || !DEVICE_LPTICKER || !DEVICE_SLEEP
 #error [NOT_SUPPORTED] test not supported
-#endif
+#else
 
 using namespace utest::v1;
 
@@ -110,3 +110,5 @@ int main()
 {
     Harness::run(specification);
 }
+
+#endif // !defined(MBED_CPU_STATS_ENABLED) || !DEVICE_LPTICKER || !DEVICE_SLEEP

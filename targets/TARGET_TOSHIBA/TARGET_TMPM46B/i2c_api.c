@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 #include "i2c_api.h"
+
+#if DEVICE_I2C
+
 #include "mbed_error.h"
 #include "PeripheralNames.h"
 #include "pinmap.h"
@@ -219,6 +222,10 @@ int i2c_write(i2c_t *obj, int address, const char *data, int length, int stop)
 
     i2c_num = obj->index;
     gI2C_TxData = (char *)calloc(length, sizeof(int8_t));
+    if (gI2C_TxData == NULL) {
+        error("Insufficient memory");
+        return 0;
+    }
 
     for (i = 0; i < length; i++) {
         gI2C_TxData[i] = data[i];
@@ -258,6 +265,10 @@ int i2c_byte_write(i2c_t *obj, int data)
     byte_func = 1;
     if (start_flag == 0 && send_byte == 0) {
         gI2C_LTxData = (char *)realloc(gI2C_LTxData, counter++);
+        if (gI2C_LTxData == NULL) {
+            error("Insufficient memory");
+            return 0;
+        }
         gI2C_LTxData[counter - 2] = data;
     }
 
@@ -346,3 +357,25 @@ void INTI2C2_IRQHandler(void)
 {
     i2c_irq_handler(2);
 }
+
+const PinMap *i2c_master_sda_pinmap()
+{
+    return PinMap_I2C_SDA;
+}
+
+const PinMap *i2c_master_scl_pinmap()
+{
+    return PinMap_I2C_SCL;
+}
+
+const PinMap *i2c_slave_sda_pinmap()
+{
+    return PinMap_I2C_SDA;
+}
+
+const PinMap *i2c_slave_scl_pinmap()
+{
+    return PinMap_I2C_SCL;
+}
+
+#endif  // #if DEVICE_I2C

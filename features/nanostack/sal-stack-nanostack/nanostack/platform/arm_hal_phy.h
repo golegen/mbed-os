@@ -29,6 +29,11 @@
 extern "C" {
 #endif
 
+/** PHY_LINK_CCA_PREPARE status definitions */
+#define PHY_TX_NOT_ALLOWED  -1      /**< TX not allowed. Do not continue to CCA process. */
+#define PHY_TX_ALLOWED      0       /**< TX allowed. Continue to CCA process. */
+#define PHY_RESTART_CSMA    1       /**< Restart CSMA-CA timer. CSMA-CA period must be calculated using given backoff time (PHY_EXTENSION_SET_CSMA_PARAMETERS) */
+
 /** Interface states */
 typedef enum {
     PHY_INTERFACE_RESET,            /**< Reset PHY driver and set to idle. */
@@ -45,8 +50,15 @@ typedef enum {
     PHY_LINK_TX_SUCCESS,        /**< MAC TX complete. MAC will a make decision to enter wait ACK or TX done state. */
     PHY_LINK_TX_FAIL,           /**< Link TX process fail. */
     PHY_LINK_CCA_FAIL,          /**< RF link CCA process fail. */
-    PHY_LINK_CCA_PREPARE,       /**< RX Tx timeout prepare operation like channel switch to Tx channel from Receive one If operation fail must return not zero*/
+    PHY_LINK_CCA_OK,            /**< RF link CCA process ok. */
+    PHY_LINK_CCA_PREPARE,       /**< Prepare for CCA after CSMA-CA: changes to CCA channel and gives permission to TX. See PHY_LINK_CCA_PREPARE status definitions for return values */
 } phy_link_tx_status_e;
+
+/** MAC filtering modes. Set corresponding bit to 1 (1 << MAC_FRAME_VERSION_X) in PHY_EXTENSION_FILTERING_SUPPORT request when PHY can handle the filtering of this frame type.
+ *  NOTE: Currently MAC supports filtering and Acking only 802.15.4-2015 frames. Any other frame version must be filtered and Acked by PHY with either HW or SW solution. */
+typedef enum {
+    MAC_FRAME_VERSION_2 = 2          /**< 802.15.4-2015 */
+} phy_link_filters_e;
 
 /** Extension types */
 typedef enum {
@@ -64,6 +76,8 @@ typedef enum {
     PHY_EXTENSION_GET_TIMESTAMP, /**<  Read 32-bit constant monotonic time stamp in us */
     PHY_EXTENSION_SET_CSMA_PARAMETERS, /**< CSMA parameter's are given by phy_csma_params_t structure remember type cast uint8_t pointer to structure type*/
     PHY_EXTENSION_GET_SYMBOLS_PER_SECOND, /**<  Read Symbols per seconds which will help to convert symbol time to real time  */
+    PHY_EXTENSION_SET_RF_CONFIGURATION,  /**<  Set RF configuration using phy_rf_channel_parameters_s structure */
+    PHY_EXTENSION_FILTERING_SUPPORT /**<  Return filtering modes that can be supported by the PHY driver. See phy_link_filters_e */
 } phy_extension_type_e;
 
 /** Address types */
@@ -130,6 +144,7 @@ typedef enum phy_modulation_e {
     M_OQPSK,    ///< OQPSK
     M_BPSK,     ///< BPSK
     M_GFSK,     ///< GFSK
+    M_2FSK,     ///< 2FSK
     M_UNDEFINED ///< UNDEFINED
 } phy_modulation_e;
 
@@ -146,13 +161,21 @@ typedef enum {
     CHANNEL_PAGE_10 = 10    ///< Page 10
 } channel_page_e;
 
+/** Modulation index */
+typedef enum {
+    MODULATION_INDEX_0_5 = 0,   ///< Modulation index 0.5
+    MODULATION_INDEX_1_0 = 1,   ///< Modulation index 1.0
+    MODULATION_INDEX_UNDEFINED  ///< Modulation index undefined
+} phy_modulation_index_e;
+
 /** Channel configuration */
 typedef struct phy_rf_channel_configuration_s {
-    uint32_t channel_0_center_frequency;    ///< Center frequency
-    uint32_t channel_spacing;               ///< Channel spacing
-    uint32_t datarate;                      ///< Data rate
-    uint16_t number_of_channels;            ///< Number of channels
-    phy_modulation_e modulation;            ///< Modulation scheme
+    uint32_t channel_0_center_frequency;        ///< Center frequency
+    uint32_t channel_spacing;                   ///< Channel spacing
+    uint32_t datarate;                          ///< Data rate
+    uint16_t number_of_channels;                ///< Number of channels
+    phy_modulation_e modulation;                ///< Modulation scheme
+    phy_modulation_index_e modulation_index;    ///< Modulation index
 } phy_rf_channel_configuration_s;
 
 /** Channel page configuration */

@@ -1,6 +1,8 @@
 /*
  * mbed Microcontroller Library
  * Copyright (c) 2017-2018 Future Electronics
+ * Copyright (c) 2018-2019 Cypress Semiconductor Corporation
+ * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +24,7 @@
 #include "PeripheralNames.h"
 
 
-// //*** I2C ***
+//*** I2C ***
 #if DEVICE_I2C
 extern const PinMap PinMap_I2C_SDA[];
 extern const PinMap PinMap_I2C_SCL[];
@@ -34,7 +36,7 @@ extern const PinMap PinMap_PWM_OUT[];
 #endif
 
 //*** SERIAL ***
-#ifdef DEVICE_SERIAL
+#if DEVICE_SERIAL
 extern const PinMap PinMap_UART_TX[];
 extern const PinMap PinMap_UART_RX[];
 extern const PinMap PinMap_UART_RTS[];
@@ -42,7 +44,7 @@ extern const PinMap PinMap_UART_CTS[];
 #endif
 
 //*** SPI ***
-#ifdef DEVICE_SPI
+#if DEVICE_SPI
 extern const PinMap PinMap_SPI_MOSI[];
 extern const PinMap PinMap_SPI_MISO[];
 extern const PinMap PinMap_SPI_SCLK[];
@@ -50,13 +52,23 @@ extern const PinMap PinMap_SPI_SSEL[];
 #endif
 
 //*** ADC ***
-#ifdef DEVICE_ANALOGIN
+#if DEVICE_ANALOGIN
 extern const PinMap PinMap_ADC[];
 #endif
 
 //*** DAC ***
-#ifdef DEVICE_ANALOGOUT
+#if DEVICE_ANALOGOUT
 extern const PinMap PinMap_DAC[];
+#endif
+
+//*** QSPI ***
+#if DEVICE_QSPI
+extern const PinMap PinMap_QSPI_SCLK[];
+extern const PinMap PinMap_QSPI_SSEL[];
+extern const PinMap PinMap_QSPI_DATA0[];
+extern const PinMap PinMap_QSPI_DATA1[];
+extern const PinMap PinMap_QSPI_DATA2[];
+extern const PinMap PinMap_QSPI_DATA3[];
 #endif
 
 #endif

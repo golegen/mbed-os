@@ -136,11 +136,11 @@
  */
 
 /* If the target has no SPI support then SDCard is not supported */
-#ifdef DEVICE_SPI
+#if DEVICE_SPI
 
 #include "SDBlockDevice.h"
+#include "rtos/ThisThread.h"
 #include "platform/mbed_debug.h"
-#include "platform/mbed_wait_api.h"
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
@@ -632,6 +632,11 @@ bd_size_t SDBlockDevice::size() const
     return _block_size * _sectors;
 }
 
+const char *SDBlockDevice::get_type() const
+{
+    return "SD";
+}
+
 void SDBlockDevice::debug(bool dbg)
 {
     _dbg = dbg;
@@ -867,7 +872,7 @@ uint32_t SDBlockDevice::_go_idle_state()
         if (R1_IDLE_STATE == response) {
             break;
         }
-        wait_ms(1);
+        rtos::ThisThread::sleep_for(1);
     }
     return response;
 }

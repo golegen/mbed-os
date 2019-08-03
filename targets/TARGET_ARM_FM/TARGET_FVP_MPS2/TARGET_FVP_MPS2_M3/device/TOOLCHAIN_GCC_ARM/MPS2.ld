@@ -2,7 +2,7 @@
  * MPS2 CMSIS Library
  */
 /*
- * Copyright (c) 2009-2018 ARM Limited. All rights reserved.
+ * Copyright (c) 2009-2019 ARM Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -21,19 +21,22 @@
 /*
  * This file is derivative of CMSIS V5.00 gcc_arm.ld
  */
-/* Linker script for mbed FVP Cortex-M3 on MPS2 */
+/* Linker script for mbed FVP Cortex-M on MPS2 */
 
 /* Linker script to configure memory regions. */
 /* The length of the VECTORS region is a bit larger than
  * is necessary based on the number of exception handlers.
  */
- 
+
 #include "../memory_zones.h"
 #include "../cmsis_nvic.h"
- 
+
+#if !defined(MBED_BOOT_STACK_SIZE)
+    #define MBED_BOOT_STACK_SIZE 0x400
+#endif
+
 MEMORY
 {
-  VECTORS (rx)          : ORIGIN = MAPPABLE_START, LENGTH = MAPPABLE_SIZE
   FLASH (rx)            : ORIGIN = ZBT_SRAM1_START, LENGTH = ZBT_SRAM1_SIZE
   RAM (rwx)             : ORIGIN = ZBT_SRAM2_START, LENGTH = ZBT_SRAM2_SIZE
 }
@@ -66,7 +69,7 @@ MEMORY
  */
 ENTRY(Reset_Handler)
 
-STACK_SIZE = 0x400;
+STACK_SIZE = MBED_BOOT_STACK_SIZE;
 
 /* Size of the vector table in SRAM */
 M_VECTOR_RAM_SIZE = NVIC_VECTORS_SIZE;
@@ -78,7 +81,7 @@ SECTIONS
         __vector_table = .;
         KEEP(*(.vector_table))
          . = ALIGN(8);
-    } > VECTORS
+    } > FLASH
 
     .text :
     {
@@ -198,6 +201,7 @@ SECTIONS
         PROVIDE(end = .);
         __HeapBase = .;
         *(.heap*)
+        . = ORIGIN(RAM) + LENGTH(RAM) - STACK_SIZE;
         __HeapLimit = .;
         __heap_limit = .; /* Add for _sbrk */
     } > RAM

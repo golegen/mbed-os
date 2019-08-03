@@ -120,19 +120,64 @@ FileHandle *mbed_target_override_console(int fd);
  * by mbed_target_override_console, else will default to serial - see
  * mbed_target_override_console for more details.
  *
- * Example:
+ * Example using UARTSerial:
  * @code
- * FileHandle* mbed::mbed_override_console(int) {
+ * FileHandle *mbed::mbed_override_console(int) {
  *     static UARTSerial my_serial(D0, D1);
  *     return &my_serial;
  * }
  * @endcode
-
+ *
+ * Example using SingleWireOutput:
+ * @code
+ * FileHandle *mbed::mbed_override_console(int) {
+ *     static SerialWireOutput swo;
+ *     return &swo;
+ * }
+ * @endcode
+ *
+ * Example using arm semihosting:
+ * @code
+ * FileHandle *mbed::mbed_override_console(int fileno) {
+ *    static LocalFileSystem fs("host");
+ *    if (fileno == STDIN_FILENO) {
+ *        static FileHandle *in_terminal;
+ *        static int in_open_result = fs.open(&in_terminal, ":tt", O_RDONLY);
+ *        return in_terminal;
+ *    } else {
+ *        static FileHandle *out_terminal;
+ *        static int out_open_result = fs.open(&out_terminal, ":tt", O_WRONLY);
+ *        return out_terminal;
+ *    }
+ * }
+ * @endcode
+ *
  * @param fd file descriptor - STDIN_FILENO, STDOUT_FILENO or STDERR_FILENO
  * @return  pointer to FileHandle to override normal stream otherwise NULL
  */
 FileHandle *mbed_override_console(int fd);
 
+/** Look up the Mbed file handle corresponding to a file descriptor
+ *
+ * This conversion function permits an application to find the underlying
+ * FileHandle object corresponding to a POSIX file descriptor.
+ *
+ * This allows access to specialized behavior only available via the
+ * FileHandle API.
+ *
+ * Example of saving power by disabling console input - for buffered serial,
+ * this would release the RX interrupt handler, which would release the
+ * deep sleep lock.
+ * @code
+ * mbed_file_handle(STDIN_FILENO)->enable_input(false);
+ * @endcode
+ *
+ * @param fd file descriptor
+ * @return   FileHandle pointer
+ *           NULL if descriptor does not correspond to a FileHandle (only
+ *           possible if it's not open with current implementation).
+ */
+FileHandle *mbed_file_handle(int fd);
 }
 
 typedef mbed::DirHandle DIR;
@@ -524,6 +569,7 @@ extern "C" {
     ssize_t write(int fildes, const void *buf, size_t nbyte);
     ssize_t read(int fildes, void *buf, size_t nbyte);
     off_t lseek(int fildes, off_t offset, int whence);
+    int ftruncate(int fildes, off_t length);
     int isatty(int fildes);
     int fsync(int fildes);
     int fstat(int fildes, struct stat *st);

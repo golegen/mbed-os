@@ -40,40 +40,25 @@
  * Memory layout notes:
  * ====================
  *
- * IAR Default Memory layout notes:
- * -Heap defined by "HEAP" region in .icf file
- * -Interrupt stack defined by "CSTACK" region in .icf file
- * -Value INITIAL_SP is ignored
+ * IAR Memory layout :
+ * - Heap defined by "HEAP" region in .icf file
+ * - Interrupt stack defined by "CSTACK" region in .icf file
+ * - Value INITIAL_SP is ignored
  *
- * IAR Custom Memory layout notes:
- * -There is no custom layout available for IAR - everything must be defined in
- *      the .icf file and use the default layout
+ * GCC Memory layout :
+ * - Heap explicitly placed in linker script (*.ld file) and heap start (__end___) and heap end (__HeapLimit) should be defined in linker script
+ * - Interrupt stack placed in linker script **.ld file) and stack start (__StackTop) and stack end (__StackLimit) should be defined in linker script
  *
- *
- * GCC Default Memory layout notes:
- * -Block of memory from symbol __end__ to define INITIAL_SP used to setup interrupt
- *      stack and heap in the function set_stack_heap()
- * -ISR_STACK_SIZE can be overridden to be larger or smaller
- *
- * GCC Custom Memory layout notes:
- * -Heap can be explicitly placed by defining both HEAP_START and HEAP_SIZE
- * -Interrupt stack can be explicitly placed by defining both ISR_STACK_START and ISR_STACK_SIZE
- *
- *
- * ARM Memory layout
- * -Block of memory from end of region "RW_IRAM1" to define INITIAL_SP used to setup interrupt
- *      stack and heap in the function set_stack_heap()
- * -ISR_STACK_SIZE can be overridden to be larger or smaller
- *
- * ARM Custom Memory layout notes:
- * -Heap can be explicitly placed by defining both HEAP_START and HEAP_SIZE
- * -Interrupt stack can be explicitly placed by defining both ISR_STACK_START and ISR_STACK_SIZE
+ * ARM Memory layout :
+ * - Heap can be explicitly placed by adding ARM_LIB_HEAP section in scatter file and defining both HEAP_START and HEAP_SIZE
+ * - Interrupt stack placed in scatter files (*.sct) by adding ARM_LIB_STACK section
  *
  */
 
 #include <stdlib.h>
 
 #include "cmsis.h"
+#include "hal/us_ticker_api.h"
 #include "mbed_toolchain.h"
 #include "mbed_boot.h"
 #include "mbed_error.h"
@@ -91,6 +76,9 @@ void mbed_init(void)
     mbed_mpu_manager_init();
     mbed_cpy_nvic();
     mbed_sdk_init();
+#if DEVICE_USTICKER && MBED_CONF_TARGET_INIT_US_TICKER_AT_BOOT
+    us_ticker_init();
+#endif
     mbed_rtos_init();
 }
 

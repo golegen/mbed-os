@@ -377,9 +377,12 @@ void ticker_insert_event_us(const ticker_data_t *const ticker, ticker_event_t *o
     /* if prev is NULL we're at the head */
     if (prev == NULL) {
         ticker->queue->head = obj;
-        schedule_interrupt(ticker);
     } else {
         prev->next = obj;
+    }
+
+    if (prev == NULL || timestamp <= ticker->queue->present_time) {
+        schedule_interrupt(ticker);
     }
 
     core_util_critical_section_exit();
@@ -416,13 +419,16 @@ timestamp_t ticker_read(const ticker_data_t *const ticker)
 
 us_timestamp_t ticker_read_us(const ticker_data_t *const ticker)
 {
+    us_timestamp_t ret;
+
     initialize(ticker);
 
     core_util_critical_section_enter();
     update_present_time(ticker);
+    ret = ticker->queue->present_time;
     core_util_critical_section_exit();
 
-    return ticker->queue->present_time;
+    return ret;
 }
 
 int ticker_get_next_timestamp(const ticker_data_t *const data, timestamp_t *timestamp)

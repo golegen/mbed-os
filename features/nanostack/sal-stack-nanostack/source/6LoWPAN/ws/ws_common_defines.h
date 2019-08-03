@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018, Arm Limited and affiliates.
+ * Copyright (c) 2018-2019, Arm Limited and affiliates.
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +27,7 @@
 #define WH_IE_RSL_TYPE              4   /**< Received Signal Level information */
 #define WH_IE_MHDS_TYPE             5   /**< MHDS information for mesh routing */
 #define WH_IE_VH_TYPE               6   /**< Vendor header information */
+#define WH_IE_EA_TYPE               9   /**< Eapol Auhtenticator EUI-64 header information */
 
 #define WS_WP_NESTED_IE             4 /**< WS nested Payload IE element'selement could include mltiple sub payload IE */
 
@@ -185,6 +186,7 @@ typedef struct ws_bs_ie {
 #define WS_FAN_VERSION_1_0 1
 
 #define WS_NEIGHBOR_LINK_TIMEOUT 2200
+#define WS_NEIGHBOR_NOT_TRUSTED_LINK_TIMEOUT 60
 #define WS_NEIGHBOR_NUD_TIMEOUT WS_NEIGHBOR_LINK_TIMEOUT / 2
 
 #define WS_NEIGBOR_ETX_SAMPLE_MAX 3
@@ -196,6 +198,18 @@ typedef struct ws_bs_ie {
 #define WS_NUD_RANDOM_SAMPLE_LENGTH WS_NEIGHBOR_NUD_TIMEOUT / 2
 
 #define WS_NUD_RANDOM_COMPARE (WS_NUD_RAND_PROBABILITY*WS_NUD_RANDOM_SAMPLE_LENGTH) / 100
+
+#define WS_ETX_MIN_SAMPLE_COUNT 4
+
+#define WS_ETX_MAX_UPDATE 1024
+
+#define WS_ETX_MIN_WAIT_TIME 60
+
+/**
+ * Wi-sun spesific non-preferred prefix policy label
+ */
+
+#define WS_NON_PREFFRED_LABEL 36
 
 /*
  * Threshold (referenced to DEVICE_MIN_SENS) above which a neighbor node may be considered for inclusion into candidate parent set
@@ -215,12 +229,33 @@ typedef struct ws_bs_ie {
  */
 #define WS_RPL_DIS_TIMEOUT 1800
 
+/*
+ * MAC Ack wait duration in symbols. 2-FSK modulation used -> 1 bit per symbol.
+ */
+#define WS_ACK_WAIT_SYMBOLS    800
+
+/*
+ * Tack max time in milliseconds.
+ */
+#define WS_TACK_MAX_MS 5
+
+// With FHSS we need to check CCA twice on TX channel
+#define WS_NUMBER_OF_CSMA_PERIODS  2
+// Interval between two CCA checks
+#define WS_CSMA_MULTI_CCA_INTERVAL 1000
+
 /* Default FHSS timing information
  *
  */
-#define WS_FHSS_UC_DWELL_INTERVAL     250;
-#define WS_FHSS_BC_INTERVAL           800;
-#define WS_FHSS_BC_DWELL_INTERVAL     200;
+#define WS_FHSS_UC_DWELL_INTERVAL     255;
+#define WS_FHSS_BC_INTERVAL           1020;
+#define WS_FHSS_BC_DWELL_INTERVAL     255;
 
+/*
+ * EAPOL relay and PAE authenticator socket settings
+ */
+#define EAPOL_RELAY_SOCKET_PORT               10253
+#define BR_EAPOL_RELAY_SOCKET_PORT            10255
+#define PAE_AUTH_SOCKET_PORT                  10254
 
 #endif /* WS_COMMON_DEFINES_H_ */
